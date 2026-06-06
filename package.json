@@ -10,7 +10,8 @@
     "worker": "tsx worker/index.ts",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "test:scraper": "tsx scripts/test-scraper.ts"
+    "test:scraper": "tsx scripts/test-scraper.ts",
+    "test:units": "tsx scripts/test-units.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
