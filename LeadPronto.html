@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LeadPronto — Lead Finder</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<!-- React + Babel -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<style>
+/* ======================================================
+   Design System tokens — inlined from _ds/
+   ====================================================== */
+
+/* colors */
+:root {
+  --orange-50:  oklch(0.980 0.016 73.7);
+  --orange-100: oklch(0.954 0.038 75.2);
+  --orange-200: oklch(0.901 0.076 70.7);
+  --orange-300: oklch(0.837 0.128 66.3);
+  --orange-400: oklch(0.750 0.183 55.9);
+  --orange-500: oklch(0.705 0.213 47.6);
+  --orange-600: oklch(0.646 0.222 41.1);
+  --orange-700: oklch(0.553 0.195 38.4);
+  --orange-800: oklch(0.470 0.157 37.3);
+  --orange-900: oklch(0.408 0.123 38.2);
+
+  --neutral-0:   oklch(1 0 0);
+  --neutral-50:  oklch(0.985 0 0);
+  --neutral-100: oklch(0.970 0 0);
+  --neutral-200: oklch(0.922 0 0);
+  --neutral-300: oklch(0.870 0 0);
+  --neutral-400: oklch(0.708 0 0);
+  --neutral-500: oklch(0.556 0 0);
+  --neutral-600: oklch(0.439 0 0);
+  --neutral-700: oklch(0.371 0 0);
+  --neutral-800: oklch(0.269 0 0);
+  --neutral-900: oklch(0.205 0 0);
+  --neutral-950: oklch(0.145 0 0);
+
+  --green-100: oklch(0.962 0.044 156);
+  --green-500: oklch(0.723 0.193 149.6);
+  --green-700: oklch(0.527 0.154 150.1);
+  --blue-100:  oklch(0.932 0.032 255.6);
+  --blue-500:  oklch(0.623 0.214 259.8);
+  --blue-700:  oklch(0.488 0.217 264.4);
+  --red-500:   oklch(0.577 0.245 27.3);
+  --red-600:   oklch(0.637 0.237 25.3);
+  --purple-100: oklch(0.946 0.033 307.2);
+  --purple-700: oklch(0.496 0.232 303.9);
+  --pink-100:  oklch(0.948 0.028 12.4);
+  --pink-700:  oklch(0.525 0.223 3.96);
+
+  --background:      var(--neutral-0);
+  --foreground:      var(--neutral-950);
+  --surface-card:    var(--neutral-0);
+  --surface-muted:   var(--neutral-100);
+  --surface-popover: var(--neutral-0);
+  --card:            var(--neutral-0);
+  --card-foreground: var(--neutral-950);
+  --primary:         var(--orange-600);
+  --primary-foreground: var(--neutral-50);
+  --primary-hover:   var(--orange-700);
+  --secondary:       var(--neutral-100);
+  --secondary-foreground: var(--neutral-900);
+  --muted:           var(--neutral-100);
+  --muted-foreground: var(--neutral-500);
+  --accent:          var(--orange-50);
+  --accent-foreground: var(--orange-700);
+  --destructive:     var(--red-500);
+  --destructive-foreground: var(--neutral-50);
+  --success:         var(--green-500);
+  --info:            var(--blue-500);
+  --text-strong:     var(--neutral-950);
+  --text-body:       var(--neutral-900);
+  --text-muted:      var(--neutral-500);
+  --text-on-brand:   var(--neutral-50);
+  --text-brand:      var(--orange-700);
+  --border:          var(--neutral-200);
+  --input:           var(--neutral-200);
+  --ring:            var(--orange-500);
+  --sidebar:         var(--neutral-50);
+  --sidebar-foreground: var(--neutral-950);
+  --sidebar-accent:  var(--orange-50);
+  --sidebar-accent-foreground: var(--orange-700);
+  --sidebar-border:  var(--neutral-200);
+
+  /* typography */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.5;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+
+  /* spacing + radius */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-pill: 999px;
+  --control-xs: 1.5rem;
+  --control-sm: 1.75rem;
+  --control-md: 2rem;
+  --control-lg: 2.25rem;
+
+  /* elevation */
+  --ring-hairline: 0 0 0 1px oklch(0.145 0 0 / 0.10);
+  --shadow-xs: 0 1px 2px 0 oklch(0.145 0 0 / 0.05);
+  --shadow-sm: 0 1px 3px 0 oklch(0.145 0 0 / 0.08), 0 1px 2px -1px oklch(0.145 0 0 / 0.06);
+  --shadow-md: 0 4px 8px -2px oklch(0.145 0 0 / 0.10), 0 2px 4px -2px oklch(0.145 0 0 / 0.06);
+  --shadow-lg: 0 12px 24px -6px oklch(0.145 0 0 / 0.12), 0 4px 8px -4px oklch(0.145 0 0 / 0.08);
+  --shadow-popover: 0 8px 24px -4px oklch(0.145 0 0 / 0.14), 0 0 0 1px oklch(0.145 0 0 / 0.06);
+  --focus-ring: 0 0 0 3px oklch(0.705 0.213 47.6 / 0.40);
+}
+
+/* base reset */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; height: 100%; }
+body { margin: 0; background: var(--background); color: var(--text-body); font-family: var(--font-sans); font-size: var(--text-sm); line-height: var(--leading-normal); -webkit-font-smoothing: antialiased; }
+h1,h2,h3,h4,h5,h6 { font-family: var(--font-heading); color: var(--text-strong); font-weight: var(--weight-semibold); line-height: var(--leading-snug); letter-spacing: var(--tracking-tight); margin: 0; }
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--orange-200); color: var(--orange-900); }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); border-color: var(--ring); }
+
+#root { min-height: 100%; }
+
+/* nav button */
+.lp-nav-btn {
+  height: 32px; padding: 0 12px; border: none; background: none; cursor: pointer;
+  font-family: var(--font-sans); font-size: 14px; font-weight: 500;
+  color: var(--muted-foreground); border-radius: var(--radius-lg);
+  transition: color 120ms ease, background 120ms ease;
+}
+.lp-nav-btn:hover { color: var(--text-strong); background: var(--muted); }
+.lp-nav-btn.is-active { color: var(--orange-700); background: var(--orange-50); }
+
+/* Leaflet popup */
+@keyframes lp-spin { to { transform: rotate(360deg); } }
+.leaflet-popup-content { margin: 12px 14px; }
+.leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: var(--shadow-popover); }
+.leaflet-container { font-family: var(--font-sans); }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--neutral-300); border-radius: 999px; border: 2px solid var(--background); }
+::-webkit-scrollbar-thumb:hover { background: var(--neutral-400); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- ============================================================
+     BASE COMPONENTS (substitui _ds_bundle.js)
+     ============================================================ -->
+<script type="text/babel">
+function LPButton({ children, variant = "default", size, type = "button", disabled, onClick, style }) {
+  const [hover, setHover] = React.useState(false);
+  const [pressed, setPressed] = React.useState(false);
+  const h = size === "sm" ? 28 : 32;
+  const fs = size === "sm" ? 13 : 14;
+  const base = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6,
+    height: h, padding: "0 14px", fontFamily: "var(--font-sans)", fontSize: fs, fontWeight: 500,
+    borderRadius: "var(--radius-lg)", cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.5 : 1, border: "none",
+    transition: "background 120ms ease, transform 80ms ease",
+    transform: pressed && !disabled ? "translateY(1px)" : "none",
+    userSelect: "none", whiteSpace: "nowrap",
+    ...style,
+  };
+  const vs = variant === "outline"
+    ? { background: hover && !disabled ? "var(--neutral-100)" : "var(--neutral-0)", color: "var(--foreground)", border: "1px solid var(--border)" }
+    : { background: pressed && !disabled ? "var(--orange-700)" : hover && !disabled ? "var(--orange-700)" : "var(--orange-600)", color: "#fff" };
+  return (
+    <button type={type} disabled={disabled} onClick={onClick}
+      onMouseEnter={() => setHover(true)} onMouseLeave={() => { setHover(false); setPressed(false); }}
+      onMouseDown={() => setPressed(true)} onMouseUp={() => setPressed(false)}
+      style={{ ...base, ...vs }}>{children}</button>
+  );
+}
+
+function LPInput({ value, onChange, placeholder, type = "text", min, max, disabled, style }) {
+  const [focus, setFocus] = React.useState(false);
+  return (
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+      min={min} max={max} disabled={disabled}
+      onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+      style={{
+        height: 32, width: "100%", padding: "0 12px",
+        fontFamily: "var(--font-sans)", fontSize: 14, color: "var(--foreground)",
+        background: "var(--background)", border: `1px solid ${focus ? "var(--ring)" : "var(--input)"}`,
+        borderRadius: "var(--radius-lg)", outline: "none",
+        boxShadow: focus ? "var(--focus-ring)" : "none",
+        transition: "border-color 120ms ease, box-shadow 120ms ease",
+        ...style,
+      }} />
+  );
+}
+
+function LPCard({ children, style }) {
+  return (
+    <div style={{
+      background: "var(--surface-card)", borderRadius: "var(--radius-xl)",
+      boxShadow: "var(--ring-hairline), var(--shadow-sm)",
+      padding: 16, display: "flex", flexDirection: "column", gap: 16,
+      ...style,
+    }}>{children}</div>
+  );
+}
+
+// Make available globally like _ds_bundle does
+Object.assign(window, {
+  Button: LPButton,
+  Input: LPInput,
+  LeadProntoDesignSystem_48420d: { Button: LPButton, Input: LPInput, Card: LPCard },
+  LeadProntoDesignSystem_48420d17: { Button: LPButton, Input: LPInput, Card: LPCard },
+});
+</script>
+
+<!-- ============================================================
+     data.jsx
+     ============================================================ -->
+<script type="text/babel">
+const RAW_LEADS = [
+  {
+    id: "ld_01", name: "Academia Corpo em Forma", category: "Academia",
+    site: null, siteUrl: null,
+    phone: "(11) 95543-2210", address: "R. Domingos de Morais, 1820 — Vila Mariana",
+    dist: 0.42, rating: 4.6, reviews: 312, score: 75, qual: "sem_site",
+    crm: "novo", lat: -23.5871, lng: -46.6345, claimed: false,
+    instagram: "corpoemforma.vm", facebook: null, hours: "Seg–Sex 06:00–23:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_02", name: "SmileLab Odontologia", category: "Dentista",
+    site: "smilelab.com.br", siteUrl: "https://www.smilelab.com.br",
+    phone: "(11) 3251-7788", address: "Av. Ana Costa, 410 — Vila Mariana",
+    dist: 0.88, rating: 4.9, reviews: 540, score: 88, qual: "analisado",
+    crm: "contatado", lat: -23.5912, lng: -46.6388, claimed: true,
+    instagram: "smilelab.odonto", facebook: "smilelaboficial", hours: "Seg–Sáb 08:00–20:00",
+    psi: { https: true, mobile: true, safeBrowsing: true, lcp: 1840, performance: 91 },
+    nextContact: "2026-06-12",
+    timeline: [
+      { type: "status_crm", ts: "2026-06-04T14:20:00", text: "Status alterado para Contatado" },
+      { type: "nota", ts: "2026-06-04T14:18:00", text: "Liguei, atendente pediu para retornar terça de manhã." },
+    ],
+  },
+  {
+    id: "ld_03", name: "Studio Pilates Mariana", category: "Pilates",
+    site: "studiomariana.com", siteUrl: "https://studiomariana.com",
+    phone: "(11) 98821-0043", address: "R. Pelotas, 95 — Vila Mariana",
+    dist: 1.12, rating: 4.7, reviews: 89, score: 34, qual: "analisado",
+    crm: "reuniao", lat: -23.5934, lng: -46.6301, claimed: false,
+    instagram: "studiopilatesmariana", facebook: null, hours: "Seg–Sex 07:00–21:00",
+    psi: { https: true, mobile: false, safeBrowsing: true, lcp: 4120, performance: 38 },
+    nextContact: "2026-06-09",
+    timeline: [
+      { type: "status_crm", ts: "2026-06-05T10:02:00", text: "Status alterado para Reunião" },
+      { type: "nota", ts: "2026-06-05T09:50:00", text: "Site lento no celular, sem mobile viewport. Boa oportunidade de redesign." },
+    ],
+  },
+  {
+    id: "ld_04", name: "Dr. Ricardo Implantes", category: "Dentista",
+    site: null, siteUrl: null,
+    phone: "(11) 99710-5512", address: "R. Sena Madureira, 760 — Vila Mariana",
+    dist: 1.34, rating: 4.4, reviews: 67, score: 75, qual: "sem_site",
+    crm: "novo", lat: -23.5958, lng: -46.6412, claimed: false,
+    instagram: null, facebook: null, hours: "Seg–Sex 09:00–18:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_05", name: "FitZone Crossfit", category: "Academia",
+    site: "fitzonecross.com.br", siteUrl: "https://fitzonecross.com.br",
+    phone: "(11) 3667-2200", address: "R. Vergueiro, 3040 — Vila Mariana",
+    dist: 1.51, rating: 4.8, reviews: 421, score: 62, qual: "analisado",
+    crm: "proposta", lat: -23.5989, lng: -46.6358, claimed: true,
+    instagram: "fitzone.crossfit", facebook: "fitzonecross", hours: "Seg–Sáb 06:00–22:00",
+    psi: { https: true, mobile: true, safeBrowsing: true, lcp: 2980, performance: 64 },
+    nextContact: "2026-06-08",
+    timeline: [
+      { type: "status_crm", ts: "2026-06-03T16:40:00", text: "Status alterado para Proposta" },
+      { type: "nota", ts: "2026-06-03T16:35:00", text: "Enviei proposta de R$ 2.400/mês para gestão de tráfego + site." },
+    ],
+  },
+  {
+    id: "ld_06", name: "Clínica Sorriso Pleno", category: "Dentista",
+    site: "sorrisopleno.odo.br", siteUrl: "https://sorrisopleno.odo.br",
+    phone: "(11) 3884-1192", address: "R. Joel Jorge de Melo, 210 — Vila Mariana",
+    dist: 0.73, rating: 4.2, reviews: 134, score: 0, qual: "pendente",
+    crm: "novo", lat: -23.5880, lng: -46.6299, claimed: false,
+    instagram: "sorrisopleno", facebook: null, hours: "Seg–Sex 08:00–19:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_07", name: "Espaço Yoga Ananda", category: "Yoga",
+    site: null, siteUrl: null,
+    phone: null, address: "R. Afonso Celso, 1188 — Vila Mariana",
+    dist: 1.05, rating: 4.9, reviews: 58, score: 75, qual: "sem_site",
+    crm: "contatado", lat: -23.5949, lng: -46.6336, claimed: false,
+    instagram: "espacoyoga.ananda", facebook: null, hours: "Seg–Sáb 07:00–20:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: "2026-06-10",
+    timeline: [
+      { type: "status_crm", ts: "2026-06-02T11:10:00", text: "Status alterado para Contatado" },
+    ],
+  },
+  {
+    id: "ld_08", name: "PowerGym 24h", category: "Academia",
+    site: "powergym24.com.br", siteUrl: "https://powergym24.com.br",
+    phone: "(11) 3271-9090", address: "Av. Bosque da Saúde, 580 — Saúde",
+    dist: 2.31, rating: 4.3, reviews: 276, score: 91, qual: "analisado",
+    crm: "fechado", lat: -23.6112, lng: -46.6298, claimed: true,
+    instagram: "powergym24h", facebook: "powergym24", hours: "24 horas",
+    psi: { https: true, mobile: true, safeBrowsing: true, lcp: 1620, performance: 95 },
+    nextContact: null,
+    timeline: [
+      { type: "status_crm", ts: "2026-05-28T09:00:00", text: "Status alterado para Fechado" },
+      { type: "nota", ts: "2026-05-27T17:22:00", text: "Contrato assinado — site institucional + SEO local." },
+    ],
+  },
+  {
+    id: "ld_09", name: "OdontoVila Clínica", category: "Dentista",
+    site: "odontovila.com.br", siteUrl: "https://odontovila.com.br",
+    phone: "(11) 3052-4410", address: "R. Loefgreen, 1340 — Vila Clementino",
+    dist: 1.88, rating: 4.1, reviews: 98, score: 47, qual: "analisado",
+    crm: "novo", lat: -23.5996, lng: -46.6445, claimed: false,
+    instagram: null, facebook: "odontovila", hours: "Seg–Sex 08:00–18:00",
+    psi: { https: false, mobile: true, safeBrowsing: true, lcp: 3680, performance: 49 },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_10", name: "Box CrossElite", category: "Academia",
+    site: null, siteUrl: null,
+    phone: "(11) 96655-7781", address: "R. Madre Cabrini, 215 — Vila Mariana",
+    dist: 0.61, rating: 4.7, reviews: 143, score: 75, qual: "sem_site",
+    crm: "novo", lat: -23.5901, lng: -46.6371, claimed: false,
+    instagram: "box.crosselite", facebook: null, hours: "Seg–Sáb 06:00–21:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_11", name: "Clínica Dental Premium", category: "Dentista",
+    site: "dentalpremium.com.br", siteUrl: "https://dentalpremium.com.br",
+    phone: "(11) 3209-8800", address: "Av. Lins de Vasconcelos, 2400 — Vila Mariana",
+    dist: 1.42, rating: 3.9, reviews: 41, score: 0, qual: "pendente",
+    crm: "novo", lat: -23.5925, lng: -46.6261, claimed: false,
+    instagram: null, facebook: null, hours: "Seg–Sex 09:00–19:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_12", name: "Vida Leve Pilates", category: "Pilates",
+    site: "vidaleve.fit", siteUrl: "https://vidaleve.fit",
+    phone: "(11) 98112-3390", address: "R. Estela, 515 — Vila Mariana",
+    dist: 0.95, rating: 4.8, reviews: 76, score: 28, qual: "analisado",
+    crm: "reuniao", lat: -23.5896, lng: -46.6418, claimed: false,
+    instagram: "vidaleve.pilates", facebook: null, hours: "Seg–Sex 07:00–20:00",
+    psi: { https: true, mobile: false, safeBrowsing: true, lcp: 5210, performance: 31 },
+    nextContact: "2026-06-11",
+    timeline: [
+      { type: "nota", ts: "2026-06-05T15:00:00", text: "Reunião agendada para quinta. Querem agendamento online no site." },
+    ],
+  },
+  {
+    id: "ld_13", name: "Sorrir+ Ortodontia", category: "Dentista",
+    site: "sorrirmais.dental", siteUrl: "https://sorrirmais.dental",
+    phone: "(11) 3045-1120", address: "R. Caramuru, 770 — Saúde",
+    dist: 2.04, rating: 4.5, reviews: 187, score: 71, qual: "erro",
+    crm: "novo", lat: -23.6088, lng: -46.6371, claimed: false,
+    instagram: "sorrirmais.orto", facebook: null, hours: "Seg–Sáb 08:00–20:00",
+    psi: { https: null, mobile: null, safeBrowsing: null, lcp: null, performance: null },
+    qualError: "Timeout ao consultar PageSpeed Insights (504)",
+    nextContact: null, timeline: [],
+  },
+  {
+    id: "ld_14", name: "Academia Movimento", category: "Academia",
+    site: "movimentoacademia.com.br", siteUrl: "https://movimentoacademia.com.br",
+    phone: "(11) 3578-6612", address: "R. Bartira, 320 — Perdizes",
+    dist: 3.42, rating: 4.0, reviews: 203, score: 58, qual: "analisado",
+    crm: "contatado", lat: -23.5341, lng: -46.6792, claimed: true,
+    instagram: "academiamovimento", facebook: "academiamovimento", hours: "Seg–Sex 06:00–23:00",
+    psi: { https: true, mobile: true, safeBrowsing: false, lcp: 3010, performance: 56 },
+    nextContact: null,
+    timeline: [
+      { type: "nota", ts: "2026-06-01T13:30:00", text: "Safe Browsing apontou alerta no domínio — usar como argumento de venda." },
+    ],
+  },
+];
+
+const QUAL_META = {
+  pendente:  { label: "Qualificando", tone: "yellow" },
+  sem_site:  { label: "Sem site",     tone: "gray" },
+  analisado: { label: "Analisado",    tone: "green" },
+  erro:      { label: "Erro",         tone: "red" },
+};
+
+const CRM_COLUMNS = [
+  { id: "novo",      label: "Novo",      tone: "blue" },
+  { id: "contatado", label: "Contatado", tone: "purple" },
+  { id: "reuniao",   label: "Reunião",   tone: "cyan" },
+  { id: "proposta",  label: "Proposta",  tone: "orange" },
+  { id: "fechado",   label: "Fechado",   tone: "green" },
+];
+const CRM_META = Object.fromEntries(CRM_COLUMNS.map((c) => [c.id, c]));
+
+const TONES = {
+  gray:   { fill: "color-mix(in oklch, var(--neutral-500) 12%, transparent)", border: "color-mix(in oklch, var(--neutral-500) 30%, transparent)", text: "var(--neutral-600)" },
+  red:    { fill: "color-mix(in oklch, var(--red-500) 12%, transparent)",     border: "color-mix(in oklch, var(--red-500) 35%, transparent)",     text: "var(--red-600)" },
+  yellow: { fill: "color-mix(in oklch, #ca8a04 14%, transparent)",            border: "color-mix(in oklch, #ca8a04 38%, transparent)",            text: "#a16207" },
+  green:  { fill: "color-mix(in oklch, var(--green-500) 14%, transparent)",   border: "color-mix(in oklch, var(--green-500) 36%, transparent)",   text: "var(--green-700)" },
+  blue:   { fill: "color-mix(in oklch, var(--blue-500) 12%, transparent)",    border: "color-mix(in oklch, var(--blue-500) 35%, transparent)",    text: "var(--blue-700)" },
+  purple: { fill: "color-mix(in oklch, var(--purple-700) 12%, transparent)",  border: "color-mix(in oklch, var(--purple-700) 34%, transparent)",  text: "var(--purple-700)" },
+  cyan:   { fill: "color-mix(in oklch, #0891b2 13%, transparent)",            border: "color-mix(in oklch, #0891b2 36%, transparent)",            text: "#0e7490" },
+  orange: { fill: "color-mix(in oklch, var(--orange-600) 13%, transparent)",  border: "color-mix(in oklch, var(--orange-600) 36%, transparent)",  text: "var(--orange-700)" },
+};
+
+function scoreTone(score) {
+  if (!score || score === 0) return "gray";
+  if (score >= 80) return "green";
+  if (score >= 60) return "yellow";
+  return "red";
+}
+function scorePinColor(score) {
+  if (score >= 80) return "#22c55e";
+  if (score >= 60) return "#eab308";
+  return "#ef4444";
+}
+function scoreBarColor(score) {
+  if (score < 40) return "#22c55e";
+  if (score < 70) return "#eab308";
+  return "#ef4444";
+}
+function hostname(url) {
+  if (!url) return null;
+  return String(url).replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+}
+function relTime(iso) {
+  const d = new Date(iso);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return "agora";
+  if (diff < 3600) return Math.floor(diff / 60) + "min atrás";
+  if (diff < 86400) return Math.floor(diff / 3600) + "h atrás";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+Object.assign(window, {
+  LP_RAW_LEADS: RAW_LEADS,
+  LP_QUAL_META: QUAL_META,
+  LP_CRM_COLUMNS: CRM_COLUMNS,
+  LP_CRM_META: CRM_META,
+  LP_TONES: TONES,
+  LP_SEARCHES: [
+    { id: "all", label: "Todas as buscas", match: () => true },
+    { id: "s1", label: "academia — Vila Mariana", match: (l) => l.category === "Academia" },
+    { id: "s2", label: "dentista — Vila Mariana", match: (l) => l.category === "Dentista" },
+    { id: "s3", label: "pilates — Vila Mariana", match: (l) => l.category === "Pilates" || l.category === "Yoga" },
+  ],
+  lpScoreTone: scoreTone,
+  lpScorePinColor: scorePinColor,
+  lpScoreBarColor: scoreBarColor,
+  lpHostname: hostname,
+  lpRelTime: relTime,
+});
+</script>
+
+<!-- ============================================================
+     icons.jsx
+     ============================================================ -->
+<script type="text/babel">
+const LP_ICON_PATHS = {
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  mapPin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  map: '<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
+  columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+  clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  externalLink: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  loader: '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+  checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  messageCircle: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  calendar: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  filter: '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
+  instagram: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>',
+  facebook: '<path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  shield: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+  smartphone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+  zap: '<path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>',
+  noteText: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/>',
+  sliders: '<line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/>',
+  inbox: '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  arrowUpDown: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>',
+};
+
+function LPIcon({ name, size = 16, color = "currentColor", strokeWidth = 2, style }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth={strokeWidth}
+      strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink: 0, display: "block", ...style }}
+      dangerouslySetInnerHTML={{ __html: LP_ICON_PATHS[name] || "" }}
+    />
+  );
+}
+window.LPIcon = LPIcon;
+</script>
+
+<!-- ============================================================
+     badges.jsx
+     ============================================================ -->
+<script type="text/babel">
+function lpToneStyle(tone) {
+  const t = window.LP_TONES[tone] || window.LP_TONES.gray;
+  return {
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4,
+    height: 20, padding: "0 8px", fontSize: 12, fontWeight: 500, lineHeight: 1,
+    whiteSpace: "nowrap", fontFamily: "var(--font-sans)",
+    background: t.fill, border: `1px solid ${t.border}`, color: t.text,
+    borderRadius: "var(--radius-pill)",
+  };
+}
+
+function LPScoreBadge({ score, style }) {
+  const tone = window.lpScoreTone(score);
+  return (
+    <span style={{ ...lpToneStyle(tone), minWidth: 34, fontFamily: "var(--font-mono)", fontWeight: 600, ...style }}>
+      {score && score > 0 ? score : "—"}
+    </span>
+  );
+}
+
+function LPQualBadge({ status, style }) {
+  const meta = window.LP_QUAL_META[status] || { label: status, tone: "gray" };
+  const Icon = window.LPIcon;
+  return (
+    <span style={{ ...lpToneStyle(meta.tone), ...style }}>
+      {status === "pendente" && <Icon name="loader" size={11} style={{ animation: "lp-spin 0.9s linear infinite" }} />}
+      {status === "analisado" && <Icon name="checkCircle" size={11} />}
+      {meta.label}
+    </span>
+  );
+}
+
+function LPCrmBadge({ status, style }) {
+  const meta = window.LP_CRM_META[status] || { label: status, tone: "gray" };
+  return <span style={{ ...lpToneStyle(meta.tone), ...style }}>{meta.label}</span>;
+}
+
+function LPBoolPill({ value, labels = ["Sim", "Não"], style }) {
+  if (value === null || value === undefined) return <span style={{ ...lpToneStyle("gray"), ...style }}>—</span>;
+  return <span style={{ ...lpToneStyle(value ? "green" : "red"), ...style }}>{value ? labels[0] : labels[1]}</span>;
+}
+
+function LPRatingBadge({ rating, reviews, translucent = false, style }) {
+  const Icon = window.LPIcon;
+  if (rating == null) return <span style={{ color: "var(--muted-foreground)" }}>—</span>;
+  const base = translucent
+    ? { ...lpToneStyle("yellow"), padding: "0 8px", height: 20 }
+    : { display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13 };
+  return (
+    <span style={{ ...base, ...style }}>
+      <Icon name="star" size={12} color="#eab308" style={{ fill: "#eab308" }} />
+      <span style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>{rating.toFixed(1)}</span>
+      {reviews != null && (
+        <span style={{ color: translucent ? "inherit" : "var(--muted-foreground)", opacity: translucent ? 0.8 : 1 }}>
+          · {reviews}
+        </span>
+      )}
+    </span>
+  );
+}
+
+Object.assign(window, { LPScoreBadge, LPQualBadge, LPCrmBadge, LPBoolPill, LPRatingBadge, lpToneStyle });
+</script>
+
+<!-- ============================================================
+     common.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPSelect({ value, onChange, options, style, ariaLabel }) {
+  const [focus, setFocus] = React.useState(false);
+  const Icon = window.LPIcon;
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", ...style }}>
+      <select aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocus(true)} onBlur={() => setFocus(false)}
+        style={{
+          appearance: "none", WebkitAppearance: "none",
+          height: 32, width: "100%", padding: "0 30px 0 12px",
+          fontFamily: "var(--font-sans)", fontSize: "var(--text-sm)",
+          color: "var(--foreground)", background: "var(--background)",
+          border: `1px solid ${focus ? "var(--ring)" : "var(--input)"}`,
+          borderRadius: "var(--radius-lg)", outline: "none", cursor: "pointer",
+          boxShadow: focus ? "var(--focus-ring)" : "none",
+          transition: "border-color 120ms ease, box-shadow 120ms ease",
+        }}>
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <Icon name="chevronDown" size={14} color="var(--muted-foreground)"
+        style={{ position: "absolute", right: 10, pointerEvents: "none" }} />
+    </div>
+  );
+}
+
+function LPEyebrow({ children, style }) {
+  return (
+    <div style={{
+      fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase",
+      color: "var(--muted-foreground)", ...style,
+    }}>{children}</div>
+  );
+}
+
+Object.assign(window, { LPSelect, LPEyebrow });
+</script>
+
+<!-- ============================================================
+     Header.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPHeader({ page, onNavigate }) {
+  const Icon = window.LPIcon;
+  const links = [
+    { id: "busca", label: "Busca" },
+    { id: "crm", label: "CRM" },
+    { id: "kanban", label: "Kanban" },
+    { id: "mapa", label: "Mapa" },
+  ];
+  return (
+    <header style={{
+      position: "sticky", top: 0, zIndex: 40,
+      borderBottom: "1px solid var(--border)",
+      background: "color-mix(in oklch, var(--background) 92%, transparent)",
+      backdropFilter: "blur(8px)",
+    }}>
+      <div style={{
+        maxWidth: 1280, margin: "0 auto", height: 56, padding: "0 24px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <button onClick={() => onNavigate("busca")}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 28, height: 28, borderRadius: 8, background: "var(--orange-600)",
+          }}>
+            <Icon name="mapPin" size={17} color="#fff" strokeWidth={2.2} />
+          </span>
+          <span style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.03em", color: "var(--neutral-950)" }}>
+            Lead<span style={{ color: "var(--orange-600)" }}>Pronto</span>
+          </span>
+        </button>
+        <nav style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {links.map((l) => (
+            <button key={l.id} className={"lp-nav-btn" + (page === l.id ? " is-active" : "")} onClick={() => onNavigate(l.id)}>
+              {l.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+window.LPHeader = LPHeader;
+</script>
+
+<!-- ============================================================
+     LeadsTable.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPLeadsTable({ leads, onOpenLead }) {
+  const Icon = window.LPIcon;
+  const { LPScoreBadge, LPQualBadge, LPCrmBadge, LPRatingBadge, lpHostname } = window;
+
+  const th = {
+    textAlign: "left", padding: "9px 12px", fontSize: 11, fontWeight: 600,
+    letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--muted-foreground)",
+    whiteSpace: "nowrap", position: "sticky", top: 0,
+    background: "var(--surface-muted)", borderBottom: "1px solid var(--border)",
+  };
+  const td = { padding: "10px 12px", borderBottom: "1px solid var(--border)", verticalAlign: "middle" };
+
+  if (leads.length === 0) {
+    return (
+      <div style={{ padding: "48px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 14 }}>
+        Nenhum lead encontrado.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+        <thead>
+          <tr>
+            <th style={th}>Empresa</th>
+            <th style={th}>Site</th>
+            <th style={th}>Telefone</th>
+            <th style={th}>Endereço</th>
+            <th style={{ ...th, textAlign: "right" }}>Dist (km)</th>
+            <th style={{ ...th, textAlign: "center" }}>Rating</th>
+            <th style={{ ...th, textAlign: "center" }}>Score</th>
+            <th style={th}>Status</th>
+            <th style={th}>CRM</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.map((l) => (
+            <tr key={l.id} onClick={() => onOpenLead(l.id)}
+              style={{ cursor: "pointer", transition: "background 100ms ease" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--orange-50)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <td style={td}>
+                <div style={{ fontWeight: 600, color: "var(--text-strong)" }}>{l.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>{l.category}</div>
+              </td>
+              <td style={td}>
+                {l.site ? (
+                  <a href={l.siteUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--text-brand)", fontWeight: 500 }}>
+                    {lpHostname(l.siteUrl)}
+                    <Icon name="externalLink" size={12} />
+                  </a>
+                ) : (
+                  <span style={{ color: "var(--muted-foreground)" }}>sem site</span>
+                )}
+              </td>
+              <td style={{ ...td, color: "var(--text-body)", whiteSpace: "nowrap" }}>
+                {l.phone || <span style={{ color: "var(--muted-foreground)" }}>-</span>}
+              </td>
+              <td style={{ ...td, fontSize: 12, color: "var(--muted-foreground)", maxWidth: 220 }}>{l.address || "-"}</td>
+              <td style={{ ...td, textAlign: "right", fontFamily: "var(--font-mono)", color: "var(--text-body)" }}>
+                {l.dist != null ? l.dist.toFixed(2) : "-"}
+              </td>
+              <td style={{ ...td, textAlign: "center", whiteSpace: "nowrap" }}>
+                <LPRatingBadge rating={l.rating} reviews={l.reviews} />
+              </td>
+              <td style={{ ...td, textAlign: "center" }}><LPScoreBadge score={l.score} /></td>
+              <td style={td}><LPQualBadge status={l.qual} /></td>
+              <td style={td}><LPCrmBadge status={l.crm} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+window.LPLeadsTable = LPLeadsTable;
+</script>
+
+<!-- ============================================================
+     SearchPage.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPSearchPage({ leads, searchState, searchError, onSearch, onOpenLead, isPolling }) {
+  const { Button, LPSelect, LPLeadsTable, LPIcon } = window;
+  const Icon = LPIcon;
+  const Card = window.LeadProntoDesignSystem_48420d.Card;
+  const Input = window.Input;
+
+  const [nicho, setNicho] = React.useState("");
+  const [regiao, setRegiao] = React.useState("");
+  const [raio, setRaio] = React.useState(3);
+  const [textInput, setTextInput] = React.useState("");
+  const [debounced, setDebounced] = React.useState("");
+  const [status, setStatus] = React.useState("todos");
+  const [minScore, setMinScore] = React.useState("0");
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(textInput), 300);
+    return () => clearTimeout(t);
+  }, [textInput]);
+
+  function submit(e) {
+    e.preventDefault();
+    onSearch({ nicho: nicho.trim(), regiao: regiao.trim(), raio });
+  }
+
+  const loading = searchState === "loading";
+
+  const filtered = React.useMemo(() => {
+    const q = debounced.trim().toLowerCase();
+    return leads.filter((l) => {
+      if (q && !(`${l.name} ${l.address || ""}`.toLowerCase().includes(q))) return false;
+      if (status !== "todos" && l.qual !== status) return false;
+      if (minScore !== "0" && (l.score || 0) < Number(minScore)) return false;
+      return true;
+    });
+  }, [leads, debounced, status, minScore]);
+
+  function exportCSV() {
+    const cols = ["Empresa","Categoria","Site","Telefone","Endereço","Distância","Score","Status Qual","Status CRM","Rating","Reviews","Instagram","Próximo Contato"];
+    const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const rows = filtered.map((l) => [
+      l.name, l.category, l.siteUrl || "", l.phone || "", l.address || "",
+      l.dist != null ? l.dist.toFixed(2) : "", l.score || "",
+      (window.LP_QUAL_META[l.qual] || {}).label || l.qual,
+      (window.LP_CRM_META[l.crm] || {}).label || l.crm,
+      l.rating ?? "", l.reviews ?? "", l.instagram || "", l.nextContact || "",
+    ].map(esc).join(","));
+    const csv = "﻿" + [cols.map(esc).join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leads_leadpronto.csv";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  const fieldLabel = {
+    fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase",
+    color: "var(--muted-foreground)", marginBottom: 6, display: "block",
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em" }}>Geração de leads</h1>
+        <p style={{ fontSize: 14, color: "var(--muted-foreground)", marginTop: 4, maxWidth: 640 }}>
+          Pesquise por nicho e região. O worker em background qualifica cada lead com PageSpeed Insights e Safe Browsing.
+        </p>
+      </div>
+
+      <Card>
+        <form onSubmit={submit} style={{ padding: "0 16px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-strong)" }}>Nova busca</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px auto", gap: 12, alignItems: "end" }}>
+            <div>
+              <label style={fieldLabel}>Nicho</label>
+              <Input value={nicho} onChange={(e) => setNicho(e.target.value)} placeholder="ex: academia, dentista" disabled={loading} />
+            </div>
+            <div>
+              <label style={fieldLabel}>Região</label>
+              <Input value={regiao} onChange={(e) => setRegiao(e.target.value)} placeholder="ex: Vila Mariana, Sao Paulo" disabled={loading} />
+            </div>
+            <div>
+              <label style={fieldLabel}>Raio (km)</label>
+              <Input type="number" min={1} max={50} value={raio}
+                onChange={(e) => setRaio(Math.max(1, Math.min(50, Number(e.target.value) || 1)))} disabled={loading} />
+            </div>
+            <Button type="submit" disabled={loading} style={{ minWidth: 138 }}>
+              {loading ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Icon name="loader" size={15} style={{ animation: "lp-spin 0.9s linear infinite" }} />
+                  Buscando...
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <Icon name="search" size={15} /> Buscar leads
+                </span>
+              )}
+            </Button>
+          </div>
+          {searchError && <div style={{ fontSize: 13, color: "var(--destructive)" }}>Erro: {searchError}</div>}
+          {loading && <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Geocodificando região e raspando o Google Maps. Isso pode levar 30s a 2min.</div>}
+        </form>
+      </Card>
+
+      {searchState === "idle" && (
+        <div style={{
+          border: "1.5px dashed var(--border)", borderRadius: "var(--radius-xl)",
+          padding: "56px 16px", textAlign: "center", color: "var(--muted-foreground)", fontSize: 14,
+        }}>Faça uma busca para ver os leads aqui.</div>
+      )}
+
+      {searchState === "done" && (
+        <Card style={{ padding: "16px 0 0", gap: 0 }}>
+          <div style={{ padding: "0 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-strong)" }}>Leads ({leads.length})</span>
+              {isPolling && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--info)" }}>
+                  <Icon name="loader" size={12} style={{ animation: "lp-spin 0.9s linear infinite" }} />
+                  atualizando...
+                </span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <div style={{ position: "relative", width: 220 }}>
+                <Icon name="search" size={14} color="var(--muted-foreground)"
+                  style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                <Input value={textInput} onChange={(e) => setTextInput(e.target.value)}
+                  placeholder="filtrar por nome/endereço" style={{ paddingLeft: 30 }} />
+              </div>
+              <LPSelect ariaLabel="Status" value={status} onChange={setStatus} style={{ width: 150 }} options={[
+                { value: "todos", label: "Todos status" },
+                { value: "pendente", label: "Pendente" },
+                { value: "sem_site", label: "Sem site" },
+                { value: "analisado", label: "Analisado" },
+                { value: "erro", label: "Erro" },
+              ]} />
+              <LPSelect ariaLabel="Score mínimo" value={minScore} onChange={setMinScore} style={{ width: 150 }} options={[
+                { value: "0", label: "Score min: qualquer" },
+                { value: "50", label: "Score min: 50" },
+                { value: "70", label: "Score min: 70" },
+                { value: "80", label: "Score min: 80" },
+              ]} />
+              <Button variant="outline" onClick={exportCSV} style={{ gap: 6 }}>
+                <Icon name="download" size={15} /> Exportar CSV
+              </Button>
+            </div>
+          </div>
+          <LPLeadsTable leads={filtered} onOpenLead={onOpenLead} />
+        </Card>
+      )}
+    </div>
+  );
+}
+window.LPSearchPage = LPSearchPage;
+</script>
+
+<!-- ============================================================
+     CrmPage.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPCrmPage({ leads, onOpenLead }) {
+  const { Button, LPSelect, LPLeadsTable, LPIcon } = window;
+  const Icon = LPIcon;
+  const Card = window.LeadProntoDesignSystem_48420d.Card;
+  const Input = window.Input;
+
+  const [busca, setBusca] = React.useState("all");
+  const [textInput, setTextInput] = React.useState("");
+  const [debounced, setDebounced] = React.useState("");
+  const [status, setStatus] = React.useState("todos");
+  const [crm, setCrm] = React.useState("todos");
+  const [minScore, setMinScore] = React.useState("0");
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(textInput), 300);
+    return () => clearTimeout(t);
+  }, [textInput]);
+
+  const searchMatch = (window.LP_SEARCHES.find((s) => s.id === busca) || window.LP_SEARCHES[0]).match;
+
+  const filtered = React.useMemo(() => {
+    const q = debounced.trim().toLowerCase();
+    return leads.filter((l) => {
+      if (!searchMatch(l)) return false;
+      if (q && !(`${l.name} ${l.address || ""}`.toLowerCase().includes(q))) return false;
+      if (status !== "todos" && l.qual !== status) return false;
+      if (crm !== "todos" && l.crm !== crm) return false;
+      if (minScore !== "0" && (l.score || 0) < Number(minScore)) return false;
+      return true;
+    });
+  }, [leads, busca, debounced, status, crm, minScore]);
+
+  function exportCSV() {
+    const cols = ["Empresa","Categoria","Site","Telefone","Endereço","Distância","Score","Status Qual","Status CRM","Rating","Reviews","Instagram","Próximo Contato"];
+    const esc = (v) => `"${String(v == null ? "" : v).replace(/"/g, '""')}"`;
+    const rows = filtered.map((l) => [
+      l.name, l.category, l.siteUrl || "", l.phone || "", l.address || "",
+      l.dist != null ? l.dist.toFixed(2) : "", l.score || "",
+      (window.LP_QUAL_META[l.qual] || {}).label || l.qual,
+      (window.LP_CRM_META[l.crm] || {}).label || l.crm,
+      l.rating ?? "", l.reviews ?? "", l.instagram || "", l.nextContact || "",
+    ].map(esc).join(","));
+    const csv = "﻿" + [cols.map(esc).join(","), ...rows].join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "leads_crm_leadpronto.csv";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <div>
+        <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em" }}>CRM — Todos os leads</h1>
+        <p style={{ fontSize: 14, color: "var(--muted-foreground)", marginTop: 4, maxWidth: 720 }}>
+          Lista consolidada de todos os leads já coletados em qualquer busca. Filtre por busca, status de qualificação, status comercial ou score.
+        </p>
+      </div>
+      <Card style={{ padding: "16px 0 0", gap: 0 }}>
+        <div style={{ padding: "0 16px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text-strong)" }}>Leads ({filtered.length})</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <LPSelect ariaLabel="Busca" value={busca} onChange={setBusca} style={{ width: 200 }}
+              options={window.LP_SEARCHES.map((s) => ({ value: s.id, label: s.label }))} />
+            <div style={{ position: "relative", width: 200 }}>
+              <Icon name="search" size={14} color="var(--muted-foreground)"
+                style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+              <Input value={textInput} onChange={(e) => setTextInput(e.target.value)}
+                placeholder="filtrar por nome/endereço" style={{ paddingLeft: 30 }} />
+            </div>
+            <LPSelect ariaLabel="Status de qualificação" value={status} onChange={setStatus} style={{ width: 140 }} options={[
+              { value: "todos", label: "Todos status" },
+              { value: "pendente", label: "Pendente" },
+              { value: "sem_site", label: "Sem site" },
+              { value: "analisado", label: "Analisado" },
+              { value: "erro", label: "Erro" },
+            ]} />
+            <LPSelect ariaLabel="Status comercial" value={crm} onChange={setCrm} style={{ width: 140 }} options={[
+              { value: "todos", label: "Todos CRM" },
+              ...window.LP_CRM_COLUMNS.map((c) => ({ value: c.id, label: c.label })),
+            ]} />
+            <LPSelect ariaLabel="Score mínimo" value={minScore} onChange={setMinScore} style={{ width: 150 }} options={[
+              { value: "0", label: "Score min: qualquer" },
+              { value: "50", label: "Score min: 50" },
+              { value: "70", label: "Score min: 70" },
+              { value: "80", label: "Score min: 80" },
+            ]} />
+            <Button variant="outline" onClick={exportCSV} style={{ gap: 6 }}>
+              <Icon name="download" size={15} /> Exportar CSV
+            </Button>
+          </div>
+        </div>
+        <LPLeadsTable leads={filtered} onOpenLead={onOpenLead} />
+      </Card>
+    </div>
+  );
+}
+window.LPCrmPage = LPCrmPage;
+</script>
+
+<!-- ============================================================
+     LeadDrawer.jsx
+     ============================================================ -->
+<script type="text/babel">
+function DrawerSection({ title, children }) {
+  return (
+    <div style={{ padding: "18px 20px", borderTop: "1px solid var(--border)" }}>
+      <div style={{
+        fontSize: 11, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase",
+        color: "var(--muted-foreground)", marginBottom: 12,
+      }}>{title}</div>
+      {children}
+    </div>
+  );
+}
+
+function ActionLink({ href, icon, label, color, bg, border }) {
+  const Icon = window.LPIcon;
+  return (
+    <a href={href} target="_blank" rel="noreferrer"
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 6, height: 30, padding: "0 10px",
+        fontSize: 13, fontWeight: 500, borderRadius: "var(--radius-lg)",
+        color: color || "var(--foreground)", background: bg || "var(--background)",
+        border: `1px solid ${border || "var(--border)"}`,
+        transition: "background 120ms ease",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(0.97)")}
+      onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}>
+      <Icon name={icon} size={14} /> {label}
+    </a>
+  );
+}
+
+function ScoreSection({ lead }) {
+  const { LPBoolPill, LPIcon, lpScoreBarColor } = window;
+  const box = {
+    background: "var(--surface-muted)", border: "1px solid var(--border)",
+    borderRadius: "var(--radius-lg)", padding: 14,
+  };
+  const bar = (value, color, label, right) => (
+    <div style={{ marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+        <span style={{ color: "var(--muted-foreground)" }}>{label}</span>
+        <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{right}</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: "var(--neutral-200)", overflow: "hidden" }}>
+        <div style={{ width: `${Math.max(0, Math.min(100, value))}%`, height: "100%", background: color, borderRadius: 999, transition: "width 300ms ease" }} />
+      </div>
+    </div>
+  );
+
+  const psi = lead.psi || {};
+  const perfColor = psi.performance >= 90 ? "#22c55e" : psi.performance >= 50 ? "#eab308" : "#ef4444";
+
+  return (
+    <div style={box}>
+      {bar(lead.score || 0, lpScoreBarColor(lead.score || 0), "Score total", `${lead.score || 0}/100`)}
+      {lead.qual === "sem_site" && (
+        <div style={{ fontSize: 12.5, color: "#a16207", marginTop: 10 }}>Sem site — score base 75 (oportunidade alta).</div>
+      )}
+      {lead.qual === "pendente" && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted-foreground)", marginTop: 10 }}>
+          <LPIcon name="loader" size={13} style={{ animation: "lp-spin 0.9s linear infinite" }} />
+          Qualificação ainda não iniciada.
+        </div>
+      )}
+      {lead.qual === "erro" && (
+        <div style={{ fontSize: 12.5, color: "var(--destructive)", marginTop: 10 }}>{lead.qualError || "Falha ao qualificar este lead."}</div>
+      )}
+      {lead.qual === "analisado" && (
+        <div style={{ marginTop: 14 }}>
+          {bar(psi.performance || 0, perfColor, "PSI Performance", psi.performance ?? "—")}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+            {[
+              { label: "HTTPS", value: psi.https },
+              { label: "Mobile viewport", value: psi.mobile },
+              { label: "Safe Browsing", value: psi.safeBrowsing, labels: ["Seguro", "Ameaça"] },
+              { label: "LCP", raw: psi.lcp != null ? `${psi.lcp} ms` : null },
+            ].map(({ label, value, raw, labels }) => (
+              <div key={label} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "8px 10px", background: "var(--background)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius-md)", fontSize: 12,
+              }}>
+                <span style={{ color: "var(--muted-foreground)" }}>{label}</span>
+                {raw !== undefined ? (
+                  raw == null
+                    ? <span style={{ color: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}>—</span>
+                    : <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{raw}</span>
+                ) : (
+                  <LPBoolPill value={value} labels={labels} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LPLeadDrawer({ lead, onClose, onUpdate, onAddNote }) {
+  const { LPScoreBadge, LPQualBadge, LPCrmBadge, LPRatingBadge, LPSelect, LPIcon, lpHostname } = window;
+  const Icon = LPIcon;
+  const [visible, setVisible] = React.useState(false);
+  const [note, setNote] = React.useState("");
+
+  React.useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+
+  const close = React.useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 220);
+  }, [onClose]);
+
+  React.useEffect(() => {
+    const h = (e) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [close]);
+
+  if (!lead) return null;
+  const waNumber = lead.phone ? "55" + lead.phone.replace(/\D/g, "") : null;
+  const mapsUrl = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(lead.address || lead.name);
+  const timeline = (lead.timeline || []).slice().sort((a, b) => new Date(b.ts) - new Date(a.ts));
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 60 }}>
+      <div onClick={close} style={{
+        position: "absolute", inset: 0, background: "rgba(10,10,10,0.5)",
+        opacity: visible ? 1 : 0, transition: "opacity 220ms ease",
+      }} />
+      <aside style={{
+        position: "absolute", top: 0, right: 0, height: "100%", width: "min(560px, 94vw)",
+        background: "var(--surface-card)", borderLeft: "1px solid var(--border)",
+        boxShadow: "var(--shadow-lg)", display: "flex", flexDirection: "column",
+        transform: visible ? "translateX(0)" : "translateX(100%)",
+        transition: "transform 240ms cubic-bezier(0.22,1,0.36,1)",
+      }}>
+        {/* sticky header */}
+        <div style={{
+          position: "sticky", top: 0, padding: "18px 20px 14px", background: "var(--surface-card)",
+          borderBottom: "1px solid var(--border)", zIndex: 2,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 600, letterSpacing: "-0.02em", color: "var(--text-strong)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {lead.name}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginTop: 2 }}>{lead.category}</div>
+            </div>
+            <button onClick={close} style={{
+              flexShrink: 0, width: 30, height: 30, borderRadius: "var(--radius-lg)", border: "none",
+              background: "transparent", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center",
+              color: "var(--muted-foreground)",
+            }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--muted)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <Icon name="x" size={18} />
+            </button>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+            <LPScoreBadge score={lead.score} />
+            <LPQualBadge status={lead.qual} />
+            <LPCrmBadge status={lead.crm} />
+            {lead.rating != null && <LPRatingBadge rating={lead.rating} reviews={lead.reviews} translucent />}
+            {lead.claimed && <span style={{ ...window.lpToneStyle("blue") }}>Reivindicado</span>}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          <DrawerSection title="Contato">
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {lead.phone && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 500 }}>{lead.phone}</span>
+                  <ActionLink href={`tel:${lead.phone.replace(/\D/g, "")}`} icon="phone" label="Ligar" />
+                  {waNumber && <ActionLink href={`https://wa.me/${waNumber}`} icon="messageCircle" label="WhatsApp" color="#fff" bg="#22c55e" border="#16a34a" />}
+                </div>
+              )}
+              {lead.address && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-body)" }}>{lead.address}</span>
+                  <ActionLink href={mapsUrl} icon="mapPin" label="Ver no Maps" />
+                </div>
+              )}
+              {lead.site ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 13, color: "var(--text-body)" }}>{lpHostname(lead.siteUrl)}</span>
+                  <ActionLink href={lead.siteUrl} icon="externalLink" label="Abrir site" />
+                </div>
+              ) : (
+                <div style={{ fontSize: 13, color: "var(--muted-foreground)" }}>Sem site cadastrado</div>
+              )}
+              {lead.dist != null && <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Distância: {lead.dist.toFixed(2)} km</div>}
+              {(lead.instagram || lead.facebook) && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {lead.instagram && <ActionLink href={`https://instagram.com/${lead.instagram}`} icon="instagram" label="Instagram" color="#fff" bg="#DD2A7B" border="#c01e63" />}
+                  {lead.facebook && <ActionLink href={`https://facebook.com/${lead.facebook}`} icon="facebook" label="Facebook" color="#fff" bg="#1877F2" border="#1568d8" />}
+                </div>
+              )}
+              {lead.hours && <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>Horário: {lead.hours}</div>}
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Score"><ScoreSection lead={lead} /></DrawerSection>
+
+          <DrawerSection title="Status CRM">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 6 }}>Estágio</div>
+                <LPSelect ariaLabel="Status CRM" value={lead.crm}
+                  onChange={(v) => onUpdate({ crm: v, _activity: `Status alterado para ${window.LP_CRM_META[v].label}` })}
+                  style={{ width: "100%" }}
+                  options={window.LP_CRM_COLUMNS.map((c) => ({ value: c.id, label: c.label }))} />
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: "var(--muted-foreground)", marginBottom: 6 }}>Próximo contato</div>
+                <input type="date" value={lead.nextContact || ""} onChange={(e) => onUpdate({ nextContact: e.target.value })}
+                  style={{
+                    height: 32, width: "100%", padding: "0 10px", fontFamily: "var(--font-sans)", fontSize: 13,
+                    color: "var(--foreground)", background: "var(--background)", border: "1px solid var(--input)",
+                    borderRadius: "var(--radius-lg)", outline: "none",
+                  }} />
+              </div>
+            </div>
+          </DrawerSection>
+
+          <DrawerSection title="Notas e histórico">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3}
+                placeholder="Escreva uma nota sobre este lead..."
+                style={{
+                  width: "100%", padding: "8px 12px", fontFamily: "var(--font-sans)", fontSize: 13,
+                  lineHeight: 1.5, color: "var(--foreground)", background: "var(--background)",
+                  border: "1px solid var(--input)", borderRadius: "var(--radius-lg)", outline: "none", resize: "none",
+                }} />
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <window.Button size="sm" disabled={!note.trim()}
+                  onClick={() => { onAddNote(note.trim()); setNote(""); }}>
+                  <Icon name="plus" size={14} /> Adicionar nota
+                </window.Button>
+              </div>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              {timeline.length === 0 ? (
+                <div style={{
+                  border: "1.5px dashed var(--border)", borderRadius: "var(--radius-lg)",
+                  padding: "20px", textAlign: "center", fontSize: 13, color: "var(--muted-foreground)",
+                }}>Sem histórico ainda.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {timeline.map((item, i) => {
+                    const isNote = item.type === "nota";
+                    return (
+                      <div key={i} style={{ display: "flex", gap: 12, position: "relative", paddingBottom: 16 }}>
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <span style={{
+                            width: 8, height: 8, borderRadius: 999, marginTop: 5, flexShrink: 0,
+                            background: isNote ? "var(--blue-500)" : "var(--neutral-400)",
+                          }} />
+                          {i < timeline.length - 1 && <span style={{ width: 1.5, flex: 1, background: "var(--border)", marginTop: 4 }} />}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                            <span style={{ ...window.lpToneStyle(isNote ? "blue" : "gray"), height: 18, fontSize: 11 }}>
+                              {isNote ? "Nota" : "status_crm"}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--muted-foreground)" }}>{window.lpRelTime(item.ts)}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--text-body)", lineHeight: 1.45 }}>{item.text}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </DrawerSection>
+          <div style={{ height: 8 }} />
+        </div>
+      </aside>
+    </div>
+  );
+}
+window.LPLeadDrawer = LPLeadDrawer;
+</script>
+
+<!-- ============================================================
+     KanbanPage.jsx
+     ============================================================ -->
+<script type="text/babel">
+function KanbanCard({ lead, onOpen, onDragStart, onDragEnd, dragging }) {
+  const { LPScoreBadge, LPQualBadge, LPIcon, lpHostname } = window;
+  const Icon = LPIcon;
+  return (
+    <div draggable
+      onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; onDragStart(lead.id); }}
+      onDragEnd={onDragEnd}
+      onClick={() => onOpen(lead.id)}
+      style={{
+        background: "var(--surface-card)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)", padding: 12, boxShadow: "var(--shadow-xs)",
+        cursor: dragging ? "grabbing" : "grab", opacity: dragging ? 0.4 : 1,
+        transition: "opacity 120ms ease, box-shadow 120ms ease",
+        display: "flex", flexDirection: "column", gap: 8,
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-sm)")}
+      onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "var(--shadow-xs)")}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ fontWeight: 600, fontSize: 13.5, color: "var(--text-strong)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {lead.name}
+        </span>
+        <LPScoreBadge score={lead.score} style={{ height: 18, minWidth: 30, fontSize: 11 }} />
+      </div>
+      {lead.category && (
+        <div style={{ fontSize: 12, color: "var(--muted-foreground)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{lead.category}</div>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+        <LPQualBadge status={lead.qual} style={{ height: 18, fontSize: 11 }} />
+        {lead.phone && <span style={{ fontSize: 11.5, color: "var(--muted-foreground)", fontFamily: "var(--font-mono)" }}>{lead.phone}</span>}
+      </div>
+      {lead.site && (
+        <a href={lead.siteUrl} target="_blank" rel="noreferrer" draggable={false}
+          onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}
+          style={{ fontSize: 12, color: "var(--text-brand)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}
+          onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+          onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}>
+          <Icon name="globe" size={11} /> {lpHostname(lead.siteUrl)}
+        </a>
+      )}
+    </div>
+  );
+}
+
+function LPKanbanPage({ leads, onOpenLead, onMoveCrm }) {
+  const [loading, setLoading] = React.useState(true);
+  const [dragId, setDragId] = React.useState(null);
+  const [overCol, setOverCol] = React.useState(null);
+  const cols = window.LP_CRM_COLUMNS;
+
+  React.useEffect(() => { const t = setTimeout(() => setLoading(false), 500); return () => clearTimeout(t); }, []);
+
+  if (loading) {
+    return <div style={{ padding: "60px 0", textAlign: "center", color: "var(--muted-foreground)", fontSize: 14 }}>Carregando leads...</div>;
+  }
+
+  function drop(colId) {
+    if (dragId) {
+      const lead = leads.find((l) => l.id === dragId);
+      if (lead && lead.crm !== colId) onMoveCrm(dragId, colId);
+    }
+    setDragId(null); setOverCol(null);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em" }}>Kanban</h1>
+        <p style={{ fontSize: 14, color: "var(--muted-foreground)", marginTop: 4 }}>Arraste os cards entre as colunas para atualizar o status comercial.</p>
+      </div>
+      <div style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 12 }}>
+        {cols.map((col) => {
+          const items = leads.filter((l) => l.crm === col.id);
+          const isOver = overCol === col.id;
+          return (
+            <div key={col.id}
+              onDragOver={(e) => { e.preventDefault(); setOverCol(col.id); }}
+              onDragLeave={(e) => { if (e.currentTarget === e.target) setOverCol(null); }}
+              onDrop={() => drop(col.id)}
+              style={{
+                width: 288, flexShrink: 0, background: "var(--surface-muted)",
+                border: `1.5px solid ${isOver ? "var(--orange-500)" : "transparent"}`,
+                borderRadius: "var(--radius-xl)", padding: 12,
+                transition: "border-color 150ms ease, background 150ms ease",
+                display: "flex", flexDirection: "column", gap: 10,
+                alignSelf: "flex-start", maxHeight: "calc(100vh - 220px)",
+              }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px" }}>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--text-strong)" }}>{col.label}</span>
+                <span style={{
+                  minWidth: 22, height: 20, padding: "0 6px", display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "var(--neutral-200)", color: "var(--muted-foreground)", fontFamily: "var(--font-mono)",
+                  fontSize: 12, fontWeight: 600, borderRadius: "var(--radius-sm)",
+                }}>{items.length}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", minHeight: 40 }}>
+                {items.length === 0 ? (
+                  <div style={{ border: "1.5px dashed var(--border)", borderRadius: "var(--radius-lg)", padding: "18px", textAlign: "center", fontSize: 12.5, color: "var(--muted-foreground)" }}>Vazio</div>
+                ) : (
+                  items.map((l) => (
+                    <KanbanCard key={l.id} lead={l} dragging={dragId === l.id}
+                      onOpen={onOpenLead} onDragStart={setDragId}
+                      onDragEnd={() => { setDragId(null); setOverCol(null); }} />
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+window.LPKanbanPage = LPKanbanPage;
+</script>
+
+<!-- ============================================================
+     MapPage.jsx
+     ============================================================ -->
+<script type="text/babel">
+function LPMapPage({ leads, onOpenLead }) {
+  const { LPSelect, LPIcon } = window;
+  const LP_SEARCHES = window.LP_SEARCHES;
+  const mapRef = React.useRef(null);
+  const layerRef = React.useRef(null);
+  const openRef = React.useRef(onOpenLead);
+  openRef.current = onOpenLead;
+
+  const [busca, setBusca] = React.useState("all");
+  const [minScore, setMinScore] = React.useState("0");
+
+  const searchMatch = (LP_SEARCHES.find((s) => s.id === busca) || LP_SEARCHES[0]).match;
+  const filtered = leads.filter((l) => searchMatch(l) && (l.score || 0) >= Number(minScore));
+  const withCoords = filtered.filter((l) => l.lat != null && l.lng != null);
+
+  React.useEffect(() => {
+    if (!window.L || mapRef.current) return;
+    const map = window.L.map("lp-map", { zoomControl: true, scrollWheelZoom: true }).setView([-23.589, -46.634], 13);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: "© OpenStreetMap",
+    }).addTo(map);
+    layerRef.current = window.L.layerGroup().addTo(map);
+    mapRef.current = map;
+    setTimeout(() => map.invalidateSize(), 100);
+    return () => { map.remove(); mapRef.current = null; };
+  }, []);
+
+  React.useEffect(() => {
+    const map = mapRef.current, layer = layerRef.current;
+    if (!map || !layer || !window.L) return;
+    layer.clearLayers();
+    withCoords.forEach((l) => {
+      const color = window.lpScorePinColor(l.score || 0);
+      const marker = window.L.circleMarker([l.lat, l.lng], { radius: 9, color, weight: 2, fillColor: color, fillOpacity: 0.6 });
+      const el = document.createElement("div");
+      el.style.minWidth = "180px";
+      el.innerHTML = `<div style="font-family:var(--font-sans);">
+        <div style="font-weight:600;font-size:14px;color:#0a0a0a;">${l.name}</div>
+        <div style="font-size:12px;color:#737373;margin-bottom:6px;">${l.category}</div>
+        <div style="font-size:12px;margin-bottom:4px;">Score: <b style="font-family:var(--font-mono);">${l.score || "—"}</b></div>
+        ${l.site ? `<a href="${l.siteUrl}" target="_blank" rel="noreferrer" style="font-size:12px;color:#ea580c;text-decoration:underline;">${window.lpHostname(l.siteUrl)}</a><br/>` : ""}
+      </div>`;
+      const btn = document.createElement("button");
+      btn.textContent = "Ver detalhes";
+      btn.style.cssText = "margin-top:8px;height:28px;padding:0 10px;border:none;border-radius:8px;background:#ea580c;color:#fff;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-sans);";
+      btn.onclick = () => { map.closePopup(); openRef.current(l.id); };
+      el.appendChild(btn);
+      marker.bindPopup(el);
+      marker.addTo(layer);
+    });
+    if (withCoords.length) {
+      const lat = withCoords.reduce((a, l) => a + l.lat, 0) / withCoords.length;
+      const lng = withCoords.reduce((a, l) => a + l.lng, 0) / withCoords.length;
+      map.setView([lat, lng], map.getZoom() || 13);
+    }
+  }, [busca, minScore, leads]);
+
+  const dot = (c) => ({ display: "inline-block", width: 9, height: 9, borderRadius: 999, background: c, marginRight: 5 });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div>
+        <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em" }}>Mapa de leads</h1>
+        <p style={{ fontSize: 14, color: "var(--muted-foreground)", marginTop: 4 }}>
+          {withCoords.length} de {filtered.length} leads com coordenadas.
+        </p>
+      </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+        background: "var(--surface-card)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-xl)", padding: 14, boxShadow: "var(--shadow-xs)",
+      }}>
+        <LPSelect ariaLabel="Busca" value={busca} onChange={setBusca} style={{ width: 230 }}
+          options={LP_SEARCHES.map((s) => ({ value: s.id, label: s.label }))} />
+        <LPSelect ariaLabel="Score mínimo" value={minScore} onChange={setMinScore} style={{ width: 160 }} options={[
+          { value: "0", label: "Score min: qualquer" },
+          { value: "50", label: "Score min: 50" },
+          { value: "70", label: "Score min: 70" },
+          { value: "80", label: "Score min: 80" },
+        ]} />
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 16, fontSize: 12.5, color: "var(--muted-foreground)" }}>
+          <span><span style={dot("#22c55e")} />Score ≥ 80</span>
+          <span><span style={dot("#eab308")} />60–79</span>
+          <span><span style={dot("#ef4444")} />&lt; 60</span>
+        </div>
+      </div>
+      <div style={{ position: "relative", borderRadius: "var(--radius-xl)", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)" }}>
+        <div id="lp-map" style={{ height: 600, width: "100%", background: "var(--surface-muted)" }} />
+        {withCoords.length === 0 && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface-card)" }}>
+            <div style={{ border: "1.5px dashed var(--border)", borderRadius: "var(--radius-lg)", padding: "24px 32px", fontSize: 14, color: "var(--muted-foreground)" }}>
+              Nenhum lead com coordenadas para exibir.
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+window.LPMapPage = LPMapPage;
+</script>
+
+<!-- ============================================================
+     App.jsx + mount
+     ============================================================ -->
+<script type="text/babel">
+function Toast({ msg }) {
+  if (!msg) return null;
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", zIndex: 80,
+      background: "var(--neutral-900)", color: "var(--neutral-50)", fontSize: 13, fontWeight: 500,
+      padding: "10px 16px", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-lg)",
+      display: "flex", alignItems: "center", gap: 8,
+    }}>
+      <window.LPIcon name="checkCircle" size={15} color="var(--green-500)" />
+      {msg}
+    </div>
+  );
+}
+
+function App() {
+  const [page, setPage] = React.useState("busca");
+  const [leads, setLeads] = React.useState(() => window.LP_RAW_LEADS.map((l) => ({ ...l })));
+  const [searchState, setSearchState] = React.useState("idle");
+  const [searchError, setSearchError] = React.useState(null);
+  const [openId, setOpenId] = React.useState(null);
+  const [toast, setToast] = React.useState(null);
+  const toastTimer = React.useRef(null);
+
+  function flash(msg) {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 2200);
+  }
+
+  function onSearch({ nicho, regiao, raio }) {
+    if (!nicho || !regiao) {
+      setSearchError("informe nicho e região para iniciar a busca.");
+      return;
+    }
+    setSearchError(null);
+    setSearchState("loading");
+    setTimeout(() => setSearchState("done"), 2200);
+  }
+
+  function updateLead(id, patch) {
+    const { _activity, ...rest } = patch;
+    setLeads((prev) => prev.map((l) => {
+      if (l.id !== id) return l;
+      const next = { ...l, ...rest };
+      if (_activity) next.timeline = [...(l.timeline || []), { type: "status_crm", ts: new Date().toISOString(), text: _activity }];
+      return next;
+    }));
+    if (_activity) flash(_activity);
+  }
+
+  function addNote(id, text) {
+    setLeads((prev) => prev.map((l) => l.id === id
+      ? { ...l, timeline: [...(l.timeline || []), { type: "nota", ts: new Date().toISOString(), text }] }
+      : l));
+    flash("Nota adicionada");
+  }
+
+  function moveCrm(id, status) {
+    updateLead(id, { crm: status, _activity: `Status alterado para ${window.LP_CRM_META[status].label}` });
+  }
+
+  const pendingCount = leads.filter((l) => l.qual === "pendente").length;
+  const isPolling = searchState === "done" && pendingCount > 0;
+
+  React.useEffect(() => {
+    if (!isPolling) return;
+    const t = setTimeout(() => {
+      setLeads((prev) => {
+        const idx = prev.findIndex((l) => l.qual === "pendente");
+        if (idx === -1) return prev;
+        const perf = 35 + Math.floor(Math.random() * 58);
+        const lcp = 1600 + Math.floor(Math.random() * 3200);
+        const next = [...prev];
+        next[idx] = {
+          ...next[idx], qual: "analisado",
+          score: Math.max(20, Math.min(96, Math.round(perf * 0.85 + 14))),
+          psi: { https: true, mobile: perf > 48, safeBrowsing: Math.random() > 0.12, lcp, performance: perf },
+        };
+        return next;
+      });
+    }, 2600);
+    return () => clearTimeout(t);
+  }, [isPolling, pendingCount]);
+
+  const openLead = leads.find((l) => l.id === openId) || null;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--background)" }}>
+      <window.LPHeader page={page} onNavigate={setPage} />
+      <main style={{ maxWidth: 1280, margin: "0 auto", padding: "32px 24px 64px" }}>
+        {page === "busca" && (
+          <window.LPSearchPage leads={leads} searchState={searchState} searchError={searchError}
+            onSearch={onSearch} onOpenLead={setOpenId} isPolling={isPolling} />
+        )}
+        {page === "crm" && <window.LPCrmPage leads={leads} onOpenLead={setOpenId} />}
+        {page === "kanban" && <window.LPKanbanPage leads={leads} onOpenLead={setOpenId} onMoveCrm={moveCrm} />}
+        {page === "mapa" && <window.LPMapPage leads={leads} onOpenLead={setOpenId} />}
+      </main>
+      {openLead && (
+        <window.LPLeadDrawer lead={openLead} onClose={() => setOpenId(null)}
+          onUpdate={(patch) => updateLead(openLead.id, patch)}
+          onAddNote={(text) => addNote(openLead.id, text)} />
+      )}
+      <Toast msg={toast} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
