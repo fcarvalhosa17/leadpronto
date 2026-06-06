@@ -85,6 +85,10 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
   const [salvandoData, setSalvandoData] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
+  const [editandoSite, setEditandoSite] = useState(false);
+  const [siteInput, setSiteInput] = useState("");
+  const [erroSite, setErroSite] = useState<string | null>(null);
+  const [salvandoSite, setSalvandoSite] = useState(false);
 
   const load = useCallback(async (id: string) => {
     setLoading(true); setErro(null);
@@ -99,7 +103,16 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
 
   useEffect(() => {
     if (leadId) { load(leadId); requestAnimationFrame(() => setVisible(true)); }
-    else { setVisible(false); setTimeout(() => { setLead(null); setNovaNota(""); }, 240); }
+    else {
+      setVisible(false);
+      setTimeout(() => {
+        setLead(null);
+        setNovaNota("");
+        setEditandoSite(false);
+        setSiteInput("");
+        setErroSite(null);
+      }, 240);
+    }
   }, [leadId, load]);
 
   const close = useCallback(() => { setVisible(false); setTimeout(onClose, 240); }, [onClose]);
@@ -110,6 +123,14 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [leadId, close]);
+
+  // Poll suave enquanto a qualificacao esta pendente (worker pode demorar segundos)
+  useEffect(() => {
+    if (!leadId || !lead) return;
+    if (lead.statusQual !== "pendente") return;
+    const t = setInterval(() => { load(leadId); }, 5000);
+    return () => clearInterval(t);
+  }, [leadId, lead, load]);
 
   async function mudarStatus(novoStatus: StatusCrm) {
     if (!lead) return;
@@ -139,6 +160,49 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
       setLead({ ...lead, proximoContato: data.lead.proximoContato });
     } catch (e) { setErro((e as Error).message); }
     finally { setSalvandoData(false); }
+  }
+
+  function iniciarEdicaoSite() {
+    setSiteInput(lead?.site || "");
+    setErroSite(null);
+    setEditandoSite(true);
+  }
+
+  function cancelarEdicaoSite() {
+    setEditandoSite(false);
+    setSiteInput("");
+    setErroSite(null);
+  }
+
+  async function salvarSite() {
+    if (!lead) return;
+    const url = siteInput.trim();
+    if (!url) { setErroSite("Informe uma URL"); return; }
+    if (!/^https?:\/\//i.test(url)) {
+      setErroSite("URL deve comecar com http:// ou https://");
+      return;
+    }
+    try { new URL(url); } catch { setErroSite("URL invalida"); return; }
+
+    setSalvandoSite(true);
+    setErroSite(null);
+    try {
+      const res = await fetch(`/api/lead/${lead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ site: url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Falha ao salvar");
+      setEditandoSite(false);
+      setSiteInput("");
+      await load(lead.id);
+      onLeadUpdated?.({ ...lead, ...data.lead });
+    } catch (e) {
+      setErroSite((e as Error).message);
+    } finally {
+      setSalvandoSite(false);
+    }
   }
 
   async function adicionarNota() {
@@ -247,12 +311,74 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
                     </div>
                   ) : <div className="text-xs text-neutral-400">Sem endereço</div>}
 
-                  {lead.site ? (
+                  {editandoSite ? (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="url"
+                          autoFocus
+                          value={siteInput}
+                          onChange={(e) => setSiteInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); salvarSite(); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelarEdicaoSite(); }
+                          }}
+                          placeholder="https://exemplo.com.br"
+                          disabled={salvandoSite}
+                          className="h-8 min-w-[220px] flex-1 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-orange-500/40"
+                        />
+                        <button
+                          onClick={salvarSite}
+                          disabled={salvandoSite || !siteInput.trim()}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                          style={{ background: "#ea580c" }}
+                        >
+                          {salvandoSite ? "Salvando..." : "Salvar"}
+                        </button>
+                        <button
+                          onClick={cancelarEdicaoSite}
+                          disabled={salvandoSite}
+                          className="inline-flex h-8 items-center rounded-lg border border-border bg-white px-3 text-xs font-medium text-neutral-600 hover:bg-surface"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      {erroSite && <div className="text-xs text-red-600">{erroSite}</div>}
+                      <div className="text-[11px] text-neutral-400">
+                        Ao salvar, o lead sera re-qualificado automaticamente.
+                      </div>
+                    </div>
+                  ) : lead.site ? (
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-orange-700">{hostname(lead.site)}</span>
                       <ActionLink href={lead.site} label="Abrir site" />
+                      <button
+                        onClick={iniciarEdicaoSite}
+                        aria-label="Editar site"
+                        title="Editar URL do site"
+                        className="inline-flex h-[30px] items-center gap-1 rounded-lg border border-border bg-white px-2.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-surface"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9"/>
+                          <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                        </svg>
+                        Editar
+                      </button>
                     </div>
-                  ) : <div className="text-xs text-neutral-400">Sem site cadastrado</div>}
+                  ) : (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-neutral-400">Sem site cadastrado</span>
+                      <button
+                        onClick={iniciarEdicaoSite}
+                        className="inline-flex h-[30px] items-center gap-1 rounded-lg border border-dashed border-orange-400 bg-orange-50 px-2.5 text-xs font-medium text-orange-700 transition-colors hover:bg-orange-100"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14"/><path d="M12 5v14"/>
+                        </svg>
+                        Adicionar site
+                      </button>
+                    </div>
+                  )}
 
                   {lead.distanciaKm != null && (
                     <div className="text-xs text-neutral-400">Distância: {lead.distanciaKm.toFixed(2)} km</div>
@@ -282,12 +408,12 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
                   {!lead.site ? (
                     <p className="mt-2.5 text-xs text-yellow-700">Sem site — score base 75 (oportunidade alta).</p>
                   ) : lead.statusQual === "pendente" ? (
-                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-neutral-400">
+                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-neutral-500">
                       <svg className="lp-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                       </svg>
-                      Qualificação ainda não iniciada.
+                      Qualificando site... isso pode levar alguns segundos.
                     </div>
                   ) : (
                     <div className="mt-3.5 space-y-2">

@@ -15,6 +15,20 @@ const STATUS_CRM_VALID = new Set([
 interface UpdatePayload {
   statusCrm?: string;
   proximoContato?: string | null;
+  site?: string | null;
+}
+
+function normalizarUrl(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (!/^https?:\/\//i.test(v)) return null;
+  try {
+    const u = new URL(v);
+    if (!u.hostname || !u.hostname.includes(".")) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
 }
 
 export async function PATCH(
@@ -26,6 +40,51 @@ export async function PATCH(
 
   const data: Record<string, unknown> = {};
   let statusCrmChange: { de: string; para: string } | null = null;
+  let siteChange: { de: string | null; para: string | null } | null = null;
+
+  if ("site" in body) {
+    if (body.site === null || body.site === "") {
+      // Remover site cadastrado -> volta para sem_site
+      data.site = null;
+      data.statusQual = "sem_site";
+      data.psiScore = null;
+      data.psiLcpMs = null;
+      data.psiInpMs = null;
+      data.psiClsScore = null;
+      data.hasHttps = null;
+      data.hasMobileVp = null;
+      data.safeMalware = null;
+      data.ultimoErro = null;
+      data.score = 75;
+      data.qualifiedAt = null;
+    } else if (typeof body.site === "string") {
+      const url = normalizarUrl(body.site);
+      if (!url) {
+        return NextResponse.json(
+          { error: "URL invalida (use http:// ou https://)" },
+          { status: 400 },
+        );
+      }
+      data.site = url;
+      // Reseta qualificacao para que o worker re-analise
+      data.statusQual = "pendente";
+      data.psiScore = null;
+      data.psiLcpMs = null;
+      data.psiInpMs = null;
+      data.psiClsScore = null;
+      data.hasHttps = null;
+      data.hasMobileVp = null;
+      data.safeMalware = null;
+      data.ultimoErro = null;
+      data.score = 0;
+      data.qualifiedAt = null;
+    } else {
+      return NextResponse.json(
+        { error: "site invalido" },
+        { status: 400 },
+      );
+    }
+  }
 
   if (body.statusCrm) {
     if (!STATUS_CRM_VALID.has(body.statusCrm)) {
@@ -57,14 +116,25 @@ export async function PATCH(
   }
 
   try {
-    // Se mudar statusCrm, precisamos ler o anterior para registrar atividade
-    if (data.statusCrm) {
+    // Se mudar statusCrm ou site, precisamos ler o anterior para registrar atividade
+    if (data.statusCrm || "site" in data) {
       const atual = await prisma.lead.findUnique({
         where: { id },
-        select: { statusCrm: true },
+        select: { statusCrm: true, site: true },
       });
-      if (atual && atual.statusCrm !== data.statusCrm) {
-        statusCrmChange = { de: atual.statusCrm, para: String(data.statusCrm) };
+      if (atual) {
+        if (data.statusCrm && atual.statusCrm !== data.statusCrm) {
+          statusCrmChange = {
+            de: atual.statusCrm,
+            para: String(data.statusCrm),
+          };
+        }
+        if ("site" in data && atual.site !== data.site) {
+          siteChange = {
+            de: atual.site,
+            para: (data.site as string | null) ?? null,
+          };
+        }
       }
     }
 
@@ -76,6 +146,21 @@ export async function PATCH(
           leadId: id,
           tipo: "status_crm_changed",
           descricao: `Status CRM: ${statusCrmChange.de} -> ${statusCrmChange.para}`,
+        },
+      });
+    }
+
+    if (siteChange) {
+      const desc = siteChange.para
+        ? siteChange.de
+          ? `Site atualizado: ${siteChange.de} -> ${siteChange.para} (re-qualificacao agendada)`
+          : `Site cadastrado manualmente: ${siteChange.para} (qualificacao agendada)`
+        : `Site removido (era ${siteChange.de ?? "—"})`;
+      await prisma.leadAtividade.create({
+        data: {
+          leadId: id,
+          tipo: "site_alterado",
+          descricao: desc,
         },
       });
     }
