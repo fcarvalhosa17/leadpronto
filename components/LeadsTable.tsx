@@ -9,6 +9,8 @@ import { LeadDrawer } from "./LeadDrawer";
 type Mode = "busca" | "crm";
 type FiltroQual = "" | "pendente" | "sem_site" | "analisado" | "erro";
 type FiltroCrm = "" | StatusCrm;
+type SortCol = "nome" | "site" | "telefone" | "endereco" | "distanciaKm" | "rating" | "score" | "statusQual" | "statusCrm";
+type SortDir = "asc" | "desc";
 
 interface Props {
   buscaId: string | null;
@@ -26,6 +28,8 @@ export function LeadsTable({ buscaId, mode = "busca" }: Props) {
   const [filtroCrm, setFiltroCrm] = useState<FiltroCrm>("");
   const [minScore, setMinScore] = useState(0);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [sortCol, setSortCol] = useState<SortCol | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [buscas, setBuscas] = useState<Busca[]>([]);
   const [filtroBuscaId, setFiltroBuscaId] = useState<string>("");
@@ -83,6 +87,23 @@ export function LeadsTable({ buscaId, mode = "busca" }: Props) {
     return () => { active = false; clearInterval(interval); };
   }, [mode, buscaId, effectiveBuscaId, qDebounced, filtroQual, filtroCrm, minScore]);
 
+  function toggleSort(col: SortCol) {
+    if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortCol(col); setSortDir("asc"); }
+  }
+
+  const sortedLeads = [...leads].sort((a, b) => {
+    if (!sortCol) return 0;
+    const dir = sortDir === "asc" ? 1 : -1;
+    const av = a[sortCol] ?? null;
+    const bv = b[sortCol] ?? null;
+    if (av === null && bv === null) return 0;
+    if (av === null) return 1;
+    if (bv === null) return -1;
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+    return String(av).localeCompare(String(bv), "pt-BR") * dir;
+  });
+
   if (mode === "busca" && !buscaId) {
     return (
       <div className="rounded-xl border border-dashed border-border p-12 text-center text-sm text-neutral-500">
@@ -91,7 +112,27 @@ export function LeadsTable({ buscaId, mode = "busca" }: Props) {
     );
   }
 
-  const thCls = "sticky top-0 bg-surface px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-neutral-500 border-b border-border";
+  const thBase = "sticky top-0 bg-surface px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-neutral-500 border-b border-border select-none";
+
+  function Th({ col, label, align }: { col: SortCol; label: string; align?: "center" | "right" }) {
+    const active = sortCol === col;
+    const alignCls = align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+    return (
+      <th className={`${thBase} cursor-pointer hover:text-neutral-950 transition-colors`}
+        onClick={() => toggleSort(col)}>
+        <span className={`inline-flex items-center gap-1 ${alignCls} w-full`}>
+          {label}
+          <span className={active ? "text-orange-600" : "text-neutral-300"}>
+            {active && sortDir === "desc" ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
+            )}
+          </span>
+        </span>
+      </th>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-border bg-white"
@@ -169,19 +210,19 @@ export function LeadsTable({ buscaId, mode = "busca" }: Props) {
         <table className="w-full text-sm">
           <thead>
             <tr>
-              <th className={thCls}>Empresa</th>
-              <th className={thCls}>Site</th>
-              <th className={thCls}>Telefone</th>
-              <th className={thCls}>Endereço</th>
-              <th className={`${thCls} text-right`}>Dist (km)</th>
-              <th className={`${thCls} text-center`}>Rating</th>
-              <th className={`${thCls} text-center`}>Score</th>
-              <th className={thCls}>Status</th>
-              <th className={thCls}>CRM</th>
+              <Th col="nome" label="Empresa" />
+              <Th col="site" label="Site" />
+              <Th col="telefone" label="Telefone" />
+              <Th col="endereco" label="Endereço" />
+              <Th col="distanciaKm" label="Dist (km)" align="right" />
+              <Th col="rating" label="Rating" align="center" />
+              <Th col="score" label="Score" align="center" />
+              <Th col="statusQual" label="Status" />
+              <Th col="statusCrm" label="CRM" />
             </tr>
           </thead>
           <tbody>
-            {leads.map((l) => (
+            {sortedLeads.map((l) => (
               <tr key={l.id} onClick={() => setSelectedLeadId(l.id)}
                 className="cursor-pointer border-t border-border transition-colors"
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#fff7ed")}
