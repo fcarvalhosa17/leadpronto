@@ -42,9 +42,12 @@ export async function PATCH(
     const lead = await prisma.lead.update({ where: { id }, data });
     return NextResponse.json({ lead });
   } catch (e) {
+    // P2025 = "Record to update not found"
+    const code = (e as { code?: string }).code;
+    const status = code === "P2025" ? 404 : 500;
     return NextResponse.json(
       { error: (e as Error).message },
-      { status: 404 },
+      { status },
     );
   }
 }

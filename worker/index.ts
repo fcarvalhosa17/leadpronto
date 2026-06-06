@@ -68,12 +68,17 @@ async function qualifyOne(leadId: string): Promise<void> {
   let psiCls: number | null = null;
   let safeThreat = false;
   let erros: string[] = [];
+  let probeOk = false;
+  let psiOk = false;
+  let safeOk = false;
 
-  // probe basico
+  // probe basico — probeSite nao lanca (retorna { ok: false } em falha)
   try {
     const probe = await probeSite(url);
     hasHttps = probe.hasHttps;
     hasMobileVp = probe.hasMobileVp;
+    probeOk = probe.ok;
+    if (!probe.ok) erros.push("probe: site nao respondeu");
   } catch (e) {
     erros.push(`probe: ${(e as Error).message}`);
   }
@@ -85,6 +90,7 @@ async function qualifyOne(leadId: string): Promise<void> {
     psiLcp = psi.lcpMs;
     psiInp = psi.inpMs;
     psiCls = psi.cls;
+    psiOk = psi.ok;
   } catch (e) {
     erros.push(`psi: ${(e as Error).message}`);
   }
@@ -93,20 +99,23 @@ async function qualifyOne(leadId: string): Promise<void> {
   try {
     const sb = await checkSafeBrowsing(url);
     safeThreat = sb.threat;
+    safeOk = true;
   } catch (e) {
     erros.push(`safe: ${(e as Error).message}`);
   }
+
+  // Erro real = nenhum sinal pode ser coletado
+  const allFailed = !probeOk && !psiOk && !safeOk;
 
   const score = computeScore({
     psiScore,
     hasHttps,
     hasMobileVp,
     safeThreat,
-    hasError: erros.length === 3, // tudo falhou
+    hasError: allFailed,
   });
 
-  const status =
-    erros.length === 3 ? "erro" : "analisado";
+  const status = allFailed ? "erro" : "analisado";
 
   await prisma.lead.update({
     where: { id: lead.id },

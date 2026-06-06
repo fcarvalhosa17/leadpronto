@@ -14,8 +14,15 @@ export function LeadsTable({ buscaId }: Props) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
+  const [qDebounced, setQDebounced] = useState("");
   const [filtroQual, setFiltroQual] = useState<FiltroQual>("");
   const [minScore, setMinScore] = useState(0);
+
+  // Debounce do termo de busca para nao refazer fetch a cada keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setQDebounced(q), 300);
+    return () => clearTimeout(t);
+  }, [q]);
 
   useEffect(() => {
     if (!buscaId) return;
@@ -29,7 +36,7 @@ export function LeadsTable({ buscaId }: Props) {
         if (buscaId) params.set("buscaId", buscaId);
         if (filtroQual) params.set("statusQual", filtroQual);
         if (minScore > 0) params.set("minScore", String(minScore));
-        if (q) params.set("q", q);
+        if (qDebounced) params.set("q", qDebounced);
 
         const res = await fetch(`/api/leads?${params.toString()}`, {
           cache: "no-store",
@@ -48,7 +55,7 @@ export function LeadsTable({ buscaId }: Props) {
       active = false;
       clearInterval(interval);
     };
-  }, [buscaId, q, filtroQual, minScore]);
+  }, [buscaId, qDebounced, filtroQual, minScore]);
 
   if (!buscaId) {
     return (
@@ -130,7 +137,13 @@ export function LeadsTable({ buscaId }: Props) {
                       rel="noreferrer"
                       className="text-primary underline-offset-2 hover:underline"
                     >
-                      {new URL(l.site).hostname.replace(/^www\./, "")}
+                      {(() => {
+                        try {
+                          return new URL(l.site).hostname.replace(/^www\./, "");
+                        } catch {
+                          return l.site;
+                        }
+                      })()}
                     </a>
                   ) : (
                     <span className="text-xs text-gray-500">sem site</span>
