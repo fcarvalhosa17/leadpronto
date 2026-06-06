@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Espelha a tabela "busca" da spec (uma busca por nicho/regiao/raio).
+model Busca {
+  id          String   @id @default(cuid())
+  nicho       String
+  regiao      String
+  raioKm      Int
+  lat         Float
+  lng         Float
+  totalLeads  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  leads       Lead[]   @relation("BuscaLeads")
+
+  @@index([createdAt])
+}
+
+// Espelha a tabela "lead" da spec.
+// status_qual: pendente | sem_site | analisado | erro
+// status_crm:  novo | contatado | reuniao | proposta | fechado
+model Lead {
+  id            String   @id @default(cuid())
+  buscaId      String?
+  busca         Busca?   @relation("BuscaLeads", fields: [buscaId], references: [id], onDelete: SetNull)
+
+  placeId       String   @unique
+  nome          String
+  categoria     String?
+  endereco      String?
+  telefone      String?
+  site          String?
+  lat           Float?
+  lng           Float?
+  distanciaKm   Float?
+
+  // Qualificacao
+  statusQual    String   @default("pendente") // pendente | sem_site | analisado | erro
+  psiScore      Int?
+  psiLcpMs      Int?
+  psiInpMs      Int?
+  psiClsScore   Float?
+  hasHttps      Boolean? // true se o site responde em https
+  hasMobileVp   Boolean? // viewport meta presente
+  safeMalware   Boolean? // true = ameaca detectada
+  ultimoErro    String?
+
+  // Scoring
+  score         Int      @default(0)
+
+  // CRM
+  statusCrm     String   @default("novo") // novo | contatado | reuniao | proposta | fechado
+
+  // Auditoria
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  qualifiedAt   DateTime?
+
+  @@index([statusQual])
+  @@index([statusCrm])
+  @@index([score])
+}
