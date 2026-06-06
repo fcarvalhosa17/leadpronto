@@ -1,29 +1,43 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Lead } from "@/lib/types";
+import type { Lead, Busca, StatusCrm } from "@/lib/types";
+import { STATUS_CRM_ORDER, STATUS_CRM_LABEL } from "@/lib/types";
 import { QualBadge, ScoreBadge, CrmBadge } from "./StatusBadge";
 import { LeadDrawer } from "./LeadDrawer";
 
+type Mode = "busca" | "crm";
+
 interface Props {
   buscaId: string | null;
+  mode?: Mode;
 }
 
 type FiltroQual = "" | "pendente" | "sem_site" | "analisado" | "erro";
+type FiltroCrm = "" | StatusCrm;
 
-export function LeadsTable({ buscaId }: Props) {
+export function LeadsTable({ buscaId, mode = "busca" }: Props) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState("");
   const [qDebounced, setQDebounced] = useState("");
   const [filtroQual, setFiltroQual] = useState<FiltroQual>("");
+  const [filtroCrm, setFiltroCrm] = useState<FiltroCrm>("");
   const [minScore, setMinScore] = useState(0);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
+  // Modo CRM: permite escolher uma busca especifica (opcional)
+  const [buscas, setBuscas] = useState<Busca[]>([]);
+  const [filtroBuscaId, setFiltroBuscaId] = useState<string>("");
+
+  // Em modo busca, o id vem da prop. Em modo crm, o usuario escolhe no select.
+  const effectiveBuscaId = mode === "busca" ? buscaId : filtroBuscaId || null;
+
   function buildExportUrl() {
     const params = new URLSearchParams();
-    if (buscaId) params.set("buscaId", buscaId);
+    if (effectiveBuscaId) params.set("buscaId", effectiveBuscaId);
     if (filtroQual) params.set("statusQual", filtroQual);
+    if (filtroCrm) params.set("statusCrm", filtroCrm);
     if (minScore > 0) params.set("minScore", String(minScore));
     if (qDebounced) params.set("q", qDebounced);
     return `/api/leads/export?${params.toString()}`;
@@ -35,8 +49,29 @@ export function LeadsTable({ buscaId }: Props) {
     return () => clearTimeout(t);
   }, [q]);
 
+  // Em modo crm, carrega a lista de buscas uma vez para popular o select
   useEffect(() => {
-    if (!buscaId) return;
+    if (mode !== "crm") return;
+    let active = true;
+    async function loadBuscas() {
+      try {
+        const res = await fetch("/api/busca", { cache: "no-store" });
+        const data = await res.json();
+        if (active) setBuscas(data.buscas || []);
+      } catch {
+        // silencioso, select fica vazio
+      }
+    }
+    loadBuscas();
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  useEffect(() => {
+    // Em modo busca, exige buscaId para evitar carregar antes do usuario buscar.
+    // Em modo crm, sempre carrega (sem buscaId = todos os leads).
+    if (mode === "busca" && !buscaId) return;
 
     let active = true;
 
@@ -44,8 +79,9 @@ export function LeadsTable({ buscaId }: Props) {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (buscaId) params.set("buscaId", buscaId);
+        if (effectiveBuscaId) params.set("buscaId", effectiveBuscaId);
         if (filtroQual) params.set("statusQual", filtroQual);
+        if (filtroCrm) params.set("statusCrm", filtroCrm);
         if (minScore > 0) params.set("minScore", String(minScore));
         if (qDebounced) params.set("q", qDebounced);
 
@@ -66,9 +102,9 @@ export function LeadsTable({ buscaId }: Props) {
       active = false;
       clearInterval(interval);
     };
-  }, [buscaId, qDebounced, filtroQual, minScore]);
+  }, [mode, buscaId, effectiveBuscaId, qDebounced, filtroQual, filtroCrm, minScore]);
 
-  if (!buscaId) {
+  if (mode === "busca" && !buscaId) {
     return (
       <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-gray-500">
         Faca uma busca para ver os leads aqui.
@@ -85,6 +121,20 @@ export function LeadsTable({ buscaId }: Props) {
             <span className="text-xs font-normal text-gray-500">atualizando...</span>
           )}
         </h2>
+        {mode === "crm" && (
+          <select
+            value={filtroBuscaId}
+            onChange={(e) => setFiltroBuscaId(e.target.value)}
+            className="rounded border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+          >
+            <option value="">Todas as buscas</option>
+            {buscas.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nicho} - {b.regiao}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -102,6 +152,20 @@ export function LeadsTable({ buscaId }: Props) {
           <option value="analisado">Analisado</option>
           <option value="erro">Erro</option>
         </select>
+        {mode === "crm" && (
+          <select
+            value={filtroCrm}
+            onChange={(e) => setFiltroCrm(e.target.value as FiltroCrm)}
+            className="rounded border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+          >
+            <option value="">Todos CRM</option>
+            {STATUS_CRM_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_CRM_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={minScore}
           onChange={(e) => setMinScore(Number(e.target.value))}

@@ -23,6 +23,9 @@ export default function RootLayout({
               <a href="/" className="hover:text-white">
                 Busca
               </a>
+              <a href="/crm" className="hover:text-white">
+                CRM
+              </a>
               <a href="/crm/kanban" className="hover:text-white">
                 Kanban
               </a>
