@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Lead } from "@/lib/types";
 import { QualBadge, ScoreBadge, CrmBadge } from "./StatusBadge";
+import { LeadDrawer } from "./LeadDrawer";
 
 interface Props {
   buscaId: string | null;
@@ -17,6 +18,16 @@ export function LeadsTable({ buscaId }: Props) {
   const [qDebounced, setQDebounced] = useState("");
   const [filtroQual, setFiltroQual] = useState<FiltroQual>("");
   const [minScore, setMinScore] = useState(0);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+
+  function buildExportUrl() {
+    const params = new URLSearchParams();
+    if (buscaId) params.set("buscaId", buscaId);
+    if (filtroQual) params.set("statusQual", filtroQual);
+    if (minScore > 0) params.set("minScore", String(minScore));
+    if (qDebounced) params.set("q", qDebounced);
+    return `/api/leads/export?${params.toString()}`;
+  }
 
   // Debounce do termo de busca para nao refazer fetch a cada keystroke
   useEffect(() => {
@@ -101,6 +112,12 @@ export function LeadsTable({ buscaId }: Props) {
           <option value={70}>Score min: 70</option>
           <option value={80}>Score min: 80</option>
         </select>
+        <a
+          href={buildExportUrl()}
+          className="rounded border border-border bg-background px-3 py-1.5 text-sm hover:border-primary"
+        >
+          Exportar CSV
+        </a>
       </div>
 
       <div className="overflow-x-auto">
@@ -112,6 +129,7 @@ export function LeadsTable({ buscaId }: Props) {
               <th className="px-4 py-3 text-left">Telefone</th>
               <th className="px-4 py-3 text-left">Endereco</th>
               <th className="px-4 py-3 text-right">Dist (km)</th>
+              <th className="px-4 py-3 text-center">Rating</th>
               <th className="px-4 py-3 text-center">Score</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">CRM</th>
@@ -121,7 +139,8 @@ export function LeadsTable({ buscaId }: Props) {
             {leads.map((l) => (
               <tr
                 key={l.id}
-                className="border-t border-border hover:bg-background/40"
+                onClick={() => setSelectedLeadId(l.id)}
+                className="cursor-pointer border-t border-border hover:bg-background/40"
               >
                 <td className="px-4 py-3">
                   <div className="font-medium text-white">{l.nome}</div>
@@ -135,6 +154,7 @@ export function LeadsTable({ buscaId }: Props) {
                       href={l.site}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="text-primary underline-offset-2 hover:underline"
                     >
                       {(() => {
@@ -156,6 +176,19 @@ export function LeadsTable({ buscaId }: Props) {
                 <td className="px-4 py-3 text-right text-gray-300">
                   {l.distanciaKm != null ? l.distanciaKm.toFixed(2) : "-"}
                 </td>
+                <td className="px-4 py-3 text-center text-xs text-gray-300">
+                  {l.rating != null ? (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="text-yellow-400">★</span>
+                      <span>{l.rating.toFixed(1)}</span>
+                      {l.totalReviews != null && (
+                        <span className="text-gray-500">· {l.totalReviews}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-gray-600">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-center">
                   <ScoreBadge score={l.score} />
                 </td>
@@ -170,7 +203,7 @@ export function LeadsTable({ buscaId }: Props) {
             {!loading && leads.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-10 text-center text-sm text-gray-500"
                 >
                   Nenhum lead encontrado.
@@ -180,6 +213,16 @@ export function LeadsTable({ buscaId }: Props) {
           </tbody>
         </table>
       </div>
+
+      <LeadDrawer
+        leadId={selectedLeadId}
+        onClose={() => setSelectedLeadId(null)}
+        onLeadUpdated={(updated) =>
+          setLeads((prev) =>
+            prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)),
+          )
+        }
+      />
     </div>
   );
 }

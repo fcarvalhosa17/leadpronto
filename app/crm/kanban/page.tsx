@@ -11,10 +11,12 @@ import {
 import type { Lead, StatusCrm } from "@/lib/types";
 import { STATUS_CRM_ORDER } from "@/lib/types";
 import { KanbanColumn } from "@/components/KanbanColumn";
+import { LeadDrawer } from "@/components/LeadDrawer";
 
 export default function KanbanPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -96,11 +98,26 @@ export default function KanbanPage() {
         <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4">
             {STATUS_CRM_ORDER.map((s) => (
-              <KanbanColumn key={s} status={s} leads={porStatus[s]} />
+              <KanbanColumn
+                key={s}
+                status={s}
+                leads={porStatus[s]}
+                onOpen={setSelectedLeadId}
+              />
             ))}
           </div>
         </DndContext>
       )}
+
+      <LeadDrawer
+        leadId={selectedLeadId}
+        onClose={() => setSelectedLeadId(null)}
+        onLeadUpdated={(updated) =>
+          setLeads((prev) =>
+            prev.map((x) => (x.id === updated.id ? { ...x, ...updated } : x)),
+          )
+        }
+      />
     </div>
   );
 }

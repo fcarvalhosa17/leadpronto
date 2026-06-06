@@ -8,9 +8,10 @@ import { KanbanCard } from "./KanbanCard";
 interface Props {
   status: StatusCrm;
   leads: Lead[];
+  onOpen?: (id: string) => void;
 }
 
-export function KanbanColumn({ status, leads }: Props) {
+export function KanbanColumn({ status, leads, onOpen }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
@@ -31,7 +32,7 @@ export function KanbanColumn({ status, leads }: Props) {
 
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto">
         {leads.map((l) => (
-          <KanbanCard key={l.id} lead={l} />
+          <KanbanCard key={l.id} lead={l} onOpen={onOpen} />
         ))}
         {leads.length === 0 && (
           <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-gray-600">

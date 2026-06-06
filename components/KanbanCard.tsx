@@ -7,9 +7,10 @@ import { ScoreBadge, QualBadge } from "./StatusBadge";
 
 interface Props {
   lead: Lead;
+  onOpen?: (id: string) => void;
 }
 
-export function KanbanCard({ lead }: Props) {
+export function KanbanCard({ lead, onOpen }: Props) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: lead.id });
 
@@ -24,7 +25,15 @@ export function KanbanCard({ lead }: Props) {
       style={style}
       {...listeners}
       {...attributes}
-      className="cursor-grab rounded-md border border-border bg-background p-3 shadow-sm active:cursor-grabbing"
+      onClick={(e) => {
+        // Evita abrir drawer ao terminar um drag
+        if (isDragging) return;
+        // Nao abrir se clicou em link interno (ex: site)
+        const target = e.target as HTMLElement;
+        if (target.closest("a")) return;
+        onOpen?.(lead.id);
+      }}
+      className="cursor-pointer rounded-md border border-border bg-background p-3 shadow-sm active:cursor-grabbing"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
