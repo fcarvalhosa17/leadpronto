@@ -3,96 +3,79 @@
 import { useEffect, useState, useCallback } from "react";
 import type { Lead, StatusCrm } from "@/lib/types";
 import { STATUS_CRM_ORDER, STATUS_CRM_LABEL } from "@/lib/types";
-import { QualBadge, ScoreBadge, CrmBadge } from "./StatusBadge";
+import { QualBadge, ScoreBadge, CrmBadge, RatingBadge } from "./StatusBadge";
 
-interface Nota {
-  id: string;
-  texto: string;
-  criadaEm: string;
+interface Nota { id: string; texto: string; criadaEm: string; }
+interface Atividade { id: string; tipo: string; descricao: string; criadaEm: string; }
+interface LeadCompleto extends Lead { notas?: Nota[]; atividades?: Atividade[]; }
+interface Props { leadId: string | null; onClose: () => void; onLeadUpdated?: (lead: Lead) => void; }
+
+function telToWhats(t: string) {
+  const d = t.replace(/\D/g, "");
+  return d.startsWith("55") ? d : `55${d}`;
 }
 
-interface Atividade {
-  id: string;
-  tipo: string;
-  descricao: string;
-  criadaEm: string;
+function hostname(url: string) {
+  try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return url; }
 }
 
-interface LeadCompleto extends Lead {
-  notas?: Nota[];
-  atividades?: Atividade[];
+function relTime(iso: string) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return "agora";
+  if (diff < 3600) return `${Math.floor(diff / 60)}min atrás`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h atrás`;
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 }
 
-interface Props {
-  leadId: string | null;
-  onClose: () => void;
-  onLeadUpdated?: (lead: Lead) => void;
+function toDateInput(v: string | Date | null | undefined) {
+  if (!v) return "";
+  const d = typeof v === "string" ? new Date(v) : v;
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Limpa o telefone para uso em wa.me (so digitos, prefixa 55 se faltar)
-function telToWhats(telefone: string): string {
-  const digits = telefone.replace(/\D/g, "");
-  if (!digits) return "";
-  return digits.startsWith("55") ? digits : `55${digits}`;
-}
-
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function toDateInputValue(iso: string | Date | null | undefined): string {
-  if (!iso) return "";
-  const d = typeof iso === "string" ? new Date(iso) : iso;
-  if (Number.isNaN(d.getTime())) return "";
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-// Barra de progresso colorida (0-100). Verde alto, amarelo medio, vermelho baixo.
-function ProgressBar({ value, invert = false }: { value: number; invert?: boolean }) {
-  const v = Math.max(0, Math.min(100, value));
-  // invert=true: alto=ruim (caso do score de oportunidade do lead)
-  // invert=false: alto=bom (caso de metricas do PSI)
-  const good = invert ? v < 40 : v >= 80;
-  const mid = invert ? v < 70 : v >= 60;
-  const color = good ? "bg-green-500" : mid ? "bg-yellow-500" : "bg-red-500";
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="h-2 w-full overflow-hidden rounded bg-background">
-      <div className={`h-full ${color}`} style={{ width: `${v}%` }} />
+    <div className="border-t border-border px-5 py-4">
+      <div className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-neutral-400">{title}</div>
+      {children}
     </div>
   );
 }
 
-function BoolPill({ value, labelTrue, labelFalse }: {
-  value: boolean | null | undefined;
-  labelTrue: string;
-  labelFalse: string;
-}) {
-  if (value == null) {
-    return <span className="text-xs text-gray-500">-</span>;
-  }
-  const cls = value
-    ? "bg-green-500/15 text-green-300 border-green-500/30"
-    : "bg-red-500/15 text-red-300 border-red-500/30";
+function ActionLink({ href, label, color, bg, border }: { href: string; label: string; color?: string; bg?: string; border?: string }) {
   return (
-    <span className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {value ? labelTrue : labelFalse}
-    </span>
+    <a href={href} target="_blank" rel="noreferrer"
+      className="inline-flex h-[30px] items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium transition-[filter]"
+      style={{ color: color || "#171717", background: bg || "#fff", border: `1px solid ${border || "#e5e5e5"}` }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = "brightness(0.96)"; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.filter = "none"; }}>
+      {label}
+    </a>
   );
 }
+
+function ProgressBar({ value, invert = false }: { value: number; invert?: boolean }) {
+  const v = Math.max(0, Math.min(100, value));
+  const good = invert ? v < 40 : v >= 80;
+  const mid  = invert ? v < 70 : v >= 60;
+  const bg = good ? "#22c55e" : mid ? "#eab308" : "#ef4444";
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+      <div className="h-full rounded-full transition-all" style={{ width: `${v}%`, background: bg }} />
+    </div>
+  );
+}
+
+function BoolPill({ value, labelTrue, labelFalse }: { value: boolean | null | undefined; labelTrue: string; labelFalse: string }) {
+  if (value == null) return <span className="text-xs text-neutral-400">—</span>;
+  const cls = value
+    ? "bg-green-100 text-green-700 border-green-300"
+    : "bg-red-100 text-red-600 border-red-300";
+  return <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${cls}`}>{value ? labelTrue : labelFalse}</span>;
+}
+
+const selectCls = "mt-1 h-8 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-orange-500/40";
 
 export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
   const [lead, setLead] = useState<LeadCompleto | null>(null);
@@ -101,40 +84,32 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
   const [salvandoNota, setSalvandoNota] = useState(false);
   const [salvandoData, setSalvandoData] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
 
   const load = useCallback(async (id: string) => {
-    setLoading(true);
-    setErro(null);
+    setLoading(true); setErro(null);
     try {
       const res = await fetch(`/api/lead/${id}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erro ao carregar lead");
       setLead(data.lead);
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setErro((e as Error).message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
-    if (leadId) {
-      load(leadId);
-    } else {
-      setLead(null);
-      setNovaNota("");
-    }
+    if (leadId) { load(leadId); requestAnimationFrame(() => setVisible(true)); }
+    else { setVisible(false); setTimeout(() => { setLead(null); setNovaNota(""); }, 240); }
   }, [leadId, load]);
 
-  // Fecha com ESC
+  const close = useCallback(() => { setVisible(false); setTimeout(onClose, 240); }, [onClose]);
+
   useEffect(() => {
     if (!leadId) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [leadId, onClose]);
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [leadId, close]);
 
   async function mudarStatus(novoStatus: StatusCrm) {
     if (!lead) return;
@@ -142,18 +117,13 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
     setLead({ ...lead, statusCrm: novoStatus });
     try {
       const res = await fetch(`/api/lead/${lead.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statusCrm: novoStatus }),
       });
-      if (!res.ok) throw new Error("Falha ao atualizar status");
-      // recarrega para trazer atividade gerada
+      if (!res.ok) throw new Error("Falha");
       await load(lead.id);
       onLeadUpdated?.({ ...lead, statusCrm: novoStatus });
-    } catch (e) {
-      setErro((e as Error).message);
-      setLead({ ...lead, statusCrm: anterior });
-    }
+    } catch (e) { setErro((e as Error).message); setLead({ ...lead, statusCrm: anterior }); }
   }
 
   async function salvarProximoContato(valor: string) {
@@ -161,20 +131,14 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
     setSalvandoData(true);
     try {
       const res = await fetch(`/api/lead/${lead.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          proximoContato: valor || null,
-        }),
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proximoContato: valor || null }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Falha ao salvar data");
+      if (!res.ok) throw new Error(data.error || "Falha");
       setLead({ ...lead, proximoContato: data.lead.proximoContato });
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvandoData(false);
-    }
+    } catch (e) { setErro((e as Error).message); }
+    finally { setSalvandoData(false); }
   }
 
   async function adicionarNota() {
@@ -182,403 +146,259 @@ export function LeadDrawer({ leadId, onClose, onLeadUpdated }: Props) {
     setSalvandoNota(true);
     try {
       const res = await fetch(`/api/lead/${lead.id}/notas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texto: novaNota.trim() }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Falha ao salvar nota");
-      }
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Falha"); }
       setNovaNota("");
       await load(lead.id);
-    } catch (e) {
-      setErro((e as Error).message);
-    } finally {
-      setSalvandoNota(false);
-    }
+    } catch (e) { setErro((e as Error).message); }
+    finally { setSalvandoNota(false); }
   }
 
   const open = leadId != null;
 
+  // Timeline
+  type TimelineItem = { kind: "nota"|"atividade"; id: string; texto: string; tipo?: string; criadaEm: string; };
+  const timeline: TimelineItem[] = lead ? [
+    ...(lead.notas || []).map((n) => ({ kind: "nota" as const, id: `n-${n.id}`, texto: n.texto, criadaEm: n.criadaEm })),
+    ...(lead.atividades || []).map((a) => ({ kind: "atividade" as const, id: `a-${a.id}`, texto: a.descricao, tipo: a.tipo, criadaEm: a.criadaEm })),
+  ].sort((a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime()) : [];
+
+  const waNumber = lead?.telefone ? telToWhats(lead.telefone) : null;
+  const mapsUrl = lead ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.endereco || lead.nome)}` : "";
+
   return (
     <>
       {/* Backdrop */}
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/50 transition-opacity ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      />
+      <div onClick={close}
+        className="fixed inset-0 z-40 transition-opacity"
+        style={{
+          background: "rgba(10,10,10,0.5)",
+          opacity: open && visible ? 1 : 0,
+          pointerEvents: open ? "auto" : "none",
+          transition: "opacity 220ms ease",
+        }} />
 
       {/* Drawer */}
       <aside
-        className={`fixed right-0 top-0 z-50 h-full w-full max-w-xl overflow-y-auto border-l border-border bg-surface shadow-2xl transition-transform ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
+        className="fixed right-0 top-0 z-50 flex h-full flex-col border-l border-border bg-white"
+        style={{
+          width: "min(560px, 94vw)",
+          boxShadow: "0 0 0 1px oklch(0.145 0 0 / 0.08), 0 12px 24px -6px oklch(0.145 0 0 / 0.14)",
+          transform: open && visible ? "translateX(0)" : "translateX(100%)",
+          transition: "transform 240ms cubic-bezier(0.22,1,0.36,1)",
+        }}>
         {!open ? null : loading && !lead ? (
-          <div className="p-8 text-sm text-gray-400">Carregando...</div>
+          <div className="p-8 text-sm text-neutral-400">Carregando...</div>
         ) : !lead ? (
-          <div className="p-8 text-sm text-red-400">
-            {erro || "Lead nao encontrado"}
-            <button onClick={onClose} className="ml-3 underline">
-              Fechar
-            </button>
+          <div className="p-8 text-sm text-red-600">
+            {erro || "Lead não encontrado"}
+            <button onClick={close} className="ml-3 underline">Fechar</button>
           </div>
         ) : (
-          <div className="flex flex-col">
-            {/* Cabecalho */}
-            <header className="sticky top-0 z-10 flex items-start gap-3 border-b border-border bg-surface p-5">
-              <div className="min-w-0 flex-1">
-                <h2 className="truncate text-lg font-semibold text-white">
-                  {lead.nome}
-                </h2>
-                {lead.categoria && (
-                  <p className="truncate text-xs text-gray-400">{lead.categoria}</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <ScoreBadge score={lead.score} />
-                  <QualBadge status={lead.statusQual} />
-                  <CrmBadge status={lead.statusCrm} />
-                  {lead.rating != null && (
-                    <span className="inline-flex items-center gap-1 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs text-yellow-200">
-                      <span>⭐</span>
-                      <span>{lead.rating.toFixed(1)}</span>
-                      {lead.totalReviews != null && (
-                        <span className="text-yellow-400/70">
-                          · {lead.totalReviews}
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  {lead.claimed && (
-                    <span className="inline-flex items-center rounded border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-xs text-blue-200">
-                      Reivindicado
-                    </span>
-                  )}
+          <>
+            {/* Sticky header */}
+            <header className="sticky top-0 z-10 border-b border-border bg-white px-5 pb-3.5 pt-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-lg font-semibold leading-snug text-neutral-950"
+                    style={{ letterSpacing: "-0.02em" }}>{lead.nome}</div>
+                  {lead.categoria && <div className="mt-0.5 text-xs text-neutral-400">{lead.categoria}</div>}
                 </div>
+                <button onClick={close} aria-label="Fechar"
+                  className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-surface hover:text-neutral-700">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                aria-label="Fechar"
-                className="rounded p-1 text-gray-400 hover:bg-background hover:text-white"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M5.3 4.3a1 1 0 0 1 1.4 0L10 7.6l3.3-3.3a1 1 0 1 1 1.4 1.4L11.4 9l3.3 3.3a1 1 0 0 1-1.4 1.4L10 10.4l-3.3 3.3a1 1 0 0 1-1.4-1.4L8.6 9 5.3 5.7a1 1 0 0 1 0-1.4Z" />
-                </svg>
-              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                <ScoreBadge score={lead.score} />
+                <QualBadge status={lead.statusQual} />
+                <CrmBadge status={lead.statusCrm} />
+                {lead.rating != null && <RatingBadge rating={lead.rating} reviews={lead.totalReviews} />}
+                {lead.claimed && (
+                  <span className="inline-flex items-center rounded-full border border-blue-300 bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                    Reivindicado
+                  </span>
+                )}
+              </div>
+              {erro && <div className="mt-2 text-xs text-red-600">{erro}</div>}
             </header>
 
-            {erro && (
-              <div className="border-b border-red-500/30 bg-red-500/10 px-5 py-2 text-xs text-red-300">
-                {erro}
-              </div>
-            )}
-
-            <div className="space-y-6 p-5">
-              {/* Seção: Contato */}
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                  Contato
-                </h3>
-                <div className="space-y-3 text-sm">
+            <div className="flex-1 overflow-y-auto">
+              {/* Contato */}
+              <Section title="Contato">
+                <div className="flex flex-col gap-3 text-sm">
                   {lead.telefone ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-gray-300">{lead.telefone}</span>
-                      <a
-                        href={`tel:${lead.telefone.replace(/\D/g, "")}`}
-                        className="rounded border border-border bg-background px-2 py-1 text-xs hover:border-primary"
-                      >
-                        Ligar
-                      </a>
-                      <a
-                        href={`https://wa.me/${telToWhats(lead.telefone)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded border border-green-500/30 bg-green-500/10 px-2 py-1 text-xs text-green-300 hover:border-green-500"
-                      >
-                        WhatsApp
-                      </a>
+                      <span className="font-mono font-medium">{lead.telefone}</span>
+                      <ActionLink href={`tel:${lead.telefone.replace(/\D/g, "")}`} label="Ligar" />
+                      {waNumber && <ActionLink href={`https://wa.me/${waNumber}`} label="WhatsApp"
+                        color="#fff" bg="#22c55e" border="#16a34a" />}
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Sem telefone</div>
-                  )}
+                  ) : <div className="text-xs text-neutral-400">Sem telefone</div>}
 
                   {lead.endereco ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-gray-300">{lead.endereco}</span>
-                      <a
-                        href={`https://maps.google.com/?q=${encodeURIComponent(lead.endereco)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded border border-border bg-background px-2 py-1 text-xs hover:border-primary"
-                      >
-                        Ver no Maps
-                      </a>
+                      <span className="text-neutral-700">{lead.endereco}</span>
+                      <ActionLink href={mapsUrl} label="Ver no Maps" />
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Sem endereco</div>
-                  )}
+                  ) : <div className="text-xs text-neutral-400">Sem endereço</div>}
 
                   {lead.site ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-primary">
-                        {(() => {
-                          try {
-                            return new URL(lead.site).hostname.replace(/^www\./, "");
-                          } catch {
-                            return lead.site;
-                          }
-                        })()}
-                      </span>
-                      <a
-                        href={lead.site}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded border border-border bg-background px-2 py-1 text-xs hover:border-primary"
-                      >
-                        Abrir site
-                      </a>
+                      <span className="font-medium text-orange-700">{hostname(lead.site)}</span>
+                      <ActionLink href={lead.site} label="Abrir site" />
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Sem site</div>
-                  )}
+                  ) : <div className="text-xs text-neutral-400">Sem site cadastrado</div>}
 
                   {lead.distanciaKm != null && (
-                    <div className="text-xs text-gray-400">
-                      Distancia: {lead.distanciaKm.toFixed(2)} km
-                    </div>
+                    <div className="text-xs text-neutral-400">Distância: {lead.distanciaKm.toFixed(2)} km</div>
                   )}
 
                   {(lead.instagram || lead.facebook) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      {lead.instagram && (
-                        <a
-                          href={lead.instagram}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded border border-pink-500/30 bg-pink-500/10 px-2 py-1 text-xs text-pink-300 hover:border-pink-500"
-                        >
-                          Instagram
-                        </a>
-                      )}
-                      {lead.facebook && (
-                        <a
-                          href={lead.facebook}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs text-blue-300 hover:border-blue-500"
-                        >
-                          Facebook
-                        </a>
-                      )}
+                    <div className="flex flex-wrap gap-2">
+                      {lead.instagram && <ActionLink href={lead.instagram} label="Instagram"
+                        color="#fff" bg="#DD2A7B" border="#c01e63" />}
+                      {lead.facebook && <ActionLink href={lead.facebook} label="Facebook"
+                        color="#fff" bg="#1877F2" border="#1568d8" />}
                     </div>
                   )}
-
-                  {lead.horario && (
-                    <div className="text-xs text-gray-400">
-                      Horario: <span className="text-gray-300">{lead.horario}</span>
-                    </div>
-                  )}
+                  {lead.horario && <div className="text-xs text-neutral-400">Horário: <span className="text-neutral-700">{lead.horario}</span></div>}
                 </div>
-              </section>
+              </Section>
 
-              {/* Seção: Score breakdown */}
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                  Score
-                </h3>
-                <div className="space-y-3 rounded-md border border-border bg-background/40 p-3">
-                  <div>
-                    <div className="mb-1 flex justify-between text-xs">
-                      <span className="text-gray-400">Score total (oportunidade)</span>
-                      <span className="font-semibold text-white">{lead.score}/100</span>
-                    </div>
-                    <ProgressBar value={lead.score} invert />
+              {/* Score */}
+              <Section title="Score">
+                <div className="rounded-lg border border-border bg-surface p-3.5">
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="text-neutral-500">Score total (oportunidade)</span>
+                    <span className="font-mono font-semibold">{lead.score}/100</span>
                   </div>
+                  <ProgressBar value={lead.score} invert />
 
                   {!lead.site ? (
-                    <p className="text-xs text-gray-400">
-                      Sem site - score base 75 (oportunidade alta).
-                    </p>
+                    <p className="mt-2.5 text-xs text-yellow-700">Sem site — score base 75 (oportunidade alta).</p>
                   ) : lead.statusQual === "pendente" ? (
-                    <p className="text-xs text-gray-400">
-                      Qualificacao ainda nao iniciada.
-                    </p>
+                    <div className="mt-2.5 flex items-center gap-1.5 text-xs text-neutral-400">
+                      <svg className="lp-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                      </svg>
+                      Qualificação ainda não iniciada.
+                    </div>
                   ) : (
-                    <div className="space-y-2 text-sm">
+                    <div className="mt-3.5 space-y-2">
                       {lead.psiScore != null && (
-                        <div>
+                        <>
                           <div className="mb-1 flex justify-between text-xs">
-                            <span className="text-gray-400">PSI Performance</span>
-                            <span className="text-gray-200">{lead.psiScore}</span>
+                            <span className="text-neutral-500">PSI Performance</span>
+                            <span className="font-mono font-semibold">{lead.psiScore}</span>
                           </div>
                           <ProgressBar value={lead.psiScore} />
-                        </div>
+                        </>
                       )}
-                      <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                        <div>
-                          <span className="block text-gray-500">HTTPS</span>
-                          <BoolPill value={lead.hasHttps} labelTrue="Sim" labelFalse="Nao" />
-                        </div>
-                        <div>
-                          <span className="block text-gray-500">Mobile viewport</span>
-                          <BoolPill value={lead.hasMobileVp} labelTrue="Sim" labelFalse="Nao" />
-                        </div>
-                        <div>
-                          <span className="block text-gray-500">Safe Browsing</span>
-                          <BoolPill
-                            value={lead.safeMalware == null ? null : !lead.safeMalware}
-                            labelTrue="Seguro"
-                            labelFalse="Ameaca"
-                          />
-                        </div>
-                        {lead.psiLcpMs != null && (
-                          <div>
-                            <span className="block text-gray-500">LCP</span>
-                            <span className="text-gray-200">{lead.psiLcpMs} ms</span>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {[
+                          { label: "HTTPS", node: <BoolPill value={lead.hasHttps} labelTrue="Sim" labelFalse="Não" /> },
+                          { label: "Mobile viewport", node: <BoolPill value={lead.hasMobileVp} labelTrue="Sim" labelFalse="Não" /> },
+                          { label: "Safe Browsing", node: <BoolPill value={lead.safeMalware == null ? null : !lead.safeMalware} labelTrue="Seguro" labelFalse="Ameaça" /> },
+                          ...(lead.psiLcpMs != null ? [{ label: "LCP", node: <span className="font-mono text-xs font-semibold">{lead.psiLcpMs} ms</span> }] : []),
+                        ].map(({ label, node }) => (
+                          <div key={label} className="flex items-center justify-between rounded-lg border border-border bg-white px-2.5 py-2 text-xs">
+                            <span className="text-neutral-400">{label}</span>
+                            {node}
                           </div>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}
-
-                  {lead.ultimoErro && (
-                    <p className="text-xs text-red-400">
-                      Erro: {lead.ultimoErro}
-                    </p>
-                  )}
+                  {lead.ultimoErro && <p className="mt-2 text-xs text-red-600">Erro: {lead.ultimoErro}</p>}
                 </div>
-              </section>
+              </Section>
 
-              {/* Seção: Status CRM */}
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                  Status CRM
-                </h3>
-                <div className="space-y-3">
+              {/* Status CRM */}
+              <Section title="Status CRM">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Status</label>
-                    <select
-                      value={lead.statusCrm}
-                      onChange={(e) => mudarStatus(e.target.value as StatusCrm)}
-                      className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    >
+                    <label className="text-xs text-neutral-500">Estágio</label>
+                    <select value={lead.statusCrm} onChange={(e) => mudarStatus(e.target.value as StatusCrm)}
+                      className={selectCls}>
                       {STATUS_CRM_ORDER.map((s) => (
-                        <option key={s} value={s}>
-                          {STATUS_CRM_LABEL[s]}
-                        </option>
+                        <option key={s} value={s}>{STATUS_CRM_LABEL[s]}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">
-                      Proximo contato
-                    </label>
-                    <input
-                      type="date"
-                      value={toDateInputValue(lead.proximoContato)}
+                    <label className="text-xs text-neutral-500">Próximo contato</label>
+                    <input type="date" value={toDateInput(lead.proximoContato)}
                       onChange={(e) => salvarProximoContato(e.target.value)}
-                      disabled={salvandoData}
-                      className="mt-1 w-full rounded border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                    />
+                      disabled={salvandoData} className={selectCls} />
                   </div>
                 </div>
-              </section>
+              </Section>
 
-              {/* Seção: Notas */}
-              <section>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                  Notas e historico
-                </h3>
-
-                <div className="mb-3">
-                  <textarea
-                    value={novaNota}
-                    onChange={(e) => setNovaNota(e.target.value)}
-                    placeholder="Escreva uma nota..."
-                    rows={3}
-                    className="w-full rounded border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                  />
-                  <div className="mt-1 flex justify-end">
-                    <button
-                      onClick={adicionarNota}
-                      disabled={salvandoNota || !novaNota.trim()}
-                      className="rounded bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50"
-                    >
+              {/* Notas */}
+              <Section title="Notas e histórico">
+                <div className="mb-3 flex flex-col gap-2">
+                  <textarea value={novaNota} onChange={(e) => setNovaNota(e.target.value)} rows={3}
+                    placeholder="Escreva uma nota sobre este lead..."
+                    className="w-full resize-none rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-[3px] focus:ring-orange-500/40" />
+                  <div className="flex justify-end">
+                    <button onClick={adicionarNota} disabled={salvandoNota || !novaNota.trim()}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-white transition-colors disabled:opacity-50"
+                      style={{ background: "#ea580c" }}
+                      onMouseEnter={(e) => { if (!novaNota.trim()) return; (e.currentTarget as HTMLButtonElement).style.background = "#c2410c"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#ea580c"; }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M5 12h14"/><path d="M12 5v14"/>
+                      </svg>
                       {salvandoNota ? "Salvando..." : "Adicionar nota"}
                     </button>
                   </div>
                 </div>
 
-                <Timeline notas={lead.notas || []} atividades={lead.atividades || []} />
-              </section>
+                {timeline.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border p-5 text-center text-sm text-neutral-400">
+                    Sem histórico ainda.
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {timeline.map((it, i) => {
+                      const isNota = it.kind === "nota";
+                      return (
+                        <div key={it.id} className="flex gap-3" style={{ paddingBottom: 14 }}>
+                          <div className="flex flex-col items-center">
+                            <span className="mt-1 h-2 w-2 shrink-0 rounded-full"
+                              style={{ background: isNota ? "#3b82f6" : "#a1a1a1" }} />
+                            {i < timeline.length - 1 && (
+                              <span className="mt-1 flex-1" style={{ width: 1.5, background: "#e5e5e5" }} />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="mb-1 flex items-center gap-2">
+                              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${
+                                isNota ? "border-blue-300 bg-blue-100 text-blue-700" : "border-neutral-300 bg-neutral-100 text-neutral-500"
+                              }`}>
+                                {isNota ? "Nota" : (it.tipo || "Atividade")}
+                              </span>
+                              <span className="text-[10px] text-neutral-400">{relTime(it.criadaEm)}</span>
+                            </div>
+                            <p className="whitespace-pre-wrap text-sm leading-snug text-neutral-700">{it.texto}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+              <div className="h-4" />
             </div>
-          </div>
+          </>
         )}
       </aside>
     </>
-  );
-}
-
-interface TimelineItem {
-  kind: "nota" | "atividade";
-  id: string;
-  texto: string;
-  tipo?: string;
-  criadaEm: string;
-}
-
-function Timeline({ notas, atividades }: { notas: Nota[]; atividades: Atividade[] }) {
-  const items: TimelineItem[] = [
-    ...notas.map((n) => ({
-      kind: "nota" as const,
-      id: `n-${n.id}`,
-      texto: n.texto,
-      criadaEm: n.criadaEm,
-    })),
-    ...atividades.map((a) => ({
-      kind: "atividade" as const,
-      id: `a-${a.id}`,
-      texto: a.descricao,
-      tipo: a.tipo,
-      criadaEm: a.criadaEm,
-    })),
-  ].sort(
-    (a, b) => new Date(b.criadaEm).getTime() - new Date(a.criadaEm).getTime(),
-  );
-
-  if (items.length === 0) {
-    return (
-      <div className="rounded border border-dashed border-border p-4 text-center text-xs text-gray-500">
-        Sem historico ainda.
-      </div>
-    );
-  }
-
-  return (
-    <ol className="space-y-2">
-      {items.map((it) => (
-        <li
-          key={it.id}
-          className="rounded border border-border bg-background/40 p-3 text-sm"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <span
-              className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] uppercase ${
-                it.kind === "nota"
-                  ? "border-blue-500/30 bg-blue-500/10 text-blue-300"
-                  : "border-gray-500/30 bg-gray-500/10 text-gray-300"
-              }`}
-            >
-              {it.kind === "nota" ? "Nota" : it.tipo || "Atividade"}
-            </span>
-            <span className="text-[10px] text-gray-500">{formatDate(it.criadaEm)}</span>
-          </div>
-          <p className="mt-1 whitespace-pre-wrap text-gray-200">{it.texto}</p>
-        </li>
-      ))}
-    </ol>
   );
 }
