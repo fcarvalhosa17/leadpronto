@@ -12,6 +12,12 @@ interface ScrapeOptions {
   timeoutMs?: number;
   /** Se true, abre janela visivel (debug). */
   headful?: boolean;
+  /**
+   * Quantos places terao detalhe aberto para extrair instagram/facebook/claimed.
+   * 0 desliga o enriquecimento. Default 0 para nao impactar o tempo total.
+   * Cada place adiciona ~3-5s.
+   */
+  enrichDetailsCount?: number;
 }
 
 const USER_AGENT =
@@ -117,6 +123,9 @@ async function extractCards(page: Page): Promise<ScrapedPlace[]> {
       site?: string;
       lat?: number;
       lng?: number;
+      rating?: number;
+      totalReviews?: number;
+      horario?: string;
     }> = [];
 
     for (const a of cards) {
@@ -165,6 +174,34 @@ async function extractCards(page: Page): Promise<ScrapedPlace[]> {
         }
       }
 
+      // Rating + totalReviews: o Google usa aria-label tipo
+      // "4,2 estrelas 87 avaliacoes" ou "4.2 stars 87 reviews". Tambem pode
+      // aparecer como texto "4,2 (87)" dentro de um span.
+      let rating: number | undefined;
+      let totalReviews: number | undefined;
+
+      const ratedEl = card?.querySelector('[aria-label*="estrela" i], [aria-label*="star" i]');
+      const ratedAria = ratedEl?.getAttribute("aria-label") || "";
+      if (ratedAria) {
+        // aceita "4,2" ou "4.2"
+        const rMatch = ratedAria.match(/(\d+[.,]\d+)/);
+        if (rMatch) rating = Number(rMatch[1].replace(",", "."));
+        // numero de reviews: primeiro inteiro depois do rating
+        const reviewsMatch = ratedAria.match(/(\d{1,3}(?:[\.,]\d{3})*)\s*(?:avalia|review)/i);
+        if (reviewsMatch) {
+          totalReviews = Number(reviewsMatch[1].replace(/[\.,]/g, ""));
+        }
+      }
+
+      // Fallback: padrao "4,2(87)" ou "4.2 (87)" no texto do card
+      if (rating == null) {
+        const txtMatch = cardText.match(/(\d+[.,]\d)\s*[\(\s]?\((\d+(?:\.\d{3})*)\)/);
+        if (txtMatch) {
+          rating = Number(txtMatch[1].replace(",", "."));
+          totalReviews = Number(txtMatch[2].replace(/\./g, ""));
+        }
+      }
+
       // categoria + endereco aparecem em spans dentro do card
       // estrategia: pegar primeiros 2 spans nao-vazios depois do nome
       const spans = Array.from(
@@ -175,6 +212,7 @@ async function extractCards(page: Page): Promise<ScrapedPlace[]> {
 
       let categoria: string | undefined;
       let endereco: string | undefined;
+      let horario: string | undefined;
       for (const txt of spans) {
         if (txt === nome) continue;
         if (txt.includes("·") || txt.includes("•")) {
@@ -195,7 +233,17 @@ async function extractCards(page: Page): Promise<ScrapedPlace[]> {
         ) {
           endereco = txt;
         }
-        if (categoria && endereco) break;
+
+        // horario: texto contendo "Aberto"/"Fechado"/"Abre as"/"Fecha as"
+        if (
+          !horario &&
+          /aberto|fechado|abre|fecha|24\s*horas|open|closes|opens/i.test(txt) &&
+          txt.length < 80
+        ) {
+          horario = txt;
+        }
+
+        if (categoria && endereco && horario) break;
       }
 
       out.push({
@@ -207,11 +255,84 @@ async function extractCards(page: Page): Promise<ScrapedPlace[]> {
         site,
         lat,
         lng,
+        rating,
+        totalReviews,
+        horario,
       });
     }
 
     return out;
   });
+}
+
+/**
+ * Opcionalmente abre o detalhe de cada place no painel lateral para extrair
+ * links de Instagram/Facebook e badge "Reivindicado". Trabalha em best-effort:
+ * qualquer falha por place e silenciada e o place segue sem o enriquecimento.
+ *
+ * Para nao explodir o tempo total, limita-se a `maxPlaces` aberturas (ordem
+ * = primeiros do feed) e tem timeout curto por place.
+ */
+async function enrichWithPlaceDetails(
+  page: Page,
+  places: ScrapedPlace[],
+  maxPlaces: number,
+): Promise<void> {
+  const toEnrich = places.slice(0, maxPlaces);
+  for (const place of toEnrich) {
+    try {
+      // Localiza o card no feed pelo placeId (substring no href)
+      const cardLink = page
+        .locator(`a[href*="${place.placeId}"]`)
+        .first();
+      const visible = await cardLink.isVisible().catch(() => false);
+      if (!visible) continue;
+
+      await cardLink.click({ timeout: 4000 });
+
+      // Espera o painel de detalhe carregar (botoes Diretrizes/Site/Telefone)
+      const detail = page.locator('div[role="main"]').last();
+      await detail
+        .waitFor({ state: "visible", timeout: 6000 })
+        .catch(() => undefined);
+      await randomDelay(500, 900);
+
+      const enrichment = await page.evaluate(() => {
+        const root = document.querySelector('div[role="main"]');
+        if (!root) return null;
+        const links = Array.from(root.querySelectorAll<HTMLAnchorElement>("a[href]"));
+        let instagram: string | undefined;
+        let facebook: string | undefined;
+        for (const l of links) {
+          const h = l.getAttribute("href") || "";
+          if (!instagram && /instagram\.com/i.test(h)) instagram = h;
+          if (!facebook && /facebook\.com/i.test(h)) facebook = h;
+          if (instagram && facebook) break;
+        }
+        const text = (root.textContent || "").toLowerCase();
+        const claimed =
+          text.includes("proprietario verificou") ||
+          text.includes("reivindicad") ||
+          text.includes("verified by owner");
+        return { instagram, facebook, claimed };
+      });
+
+      if (enrichment) {
+        place.instagram = enrichment.instagram;
+        place.facebook = enrichment.facebook;
+        place.claimed = enrichment.claimed;
+      }
+
+      // Volta para o feed
+      const backBtn = page
+        .locator('button[aria-label*="Voltar" i], button[aria-label*="Back" i]')
+        .first();
+      await backBtn.click({ timeout: 2000 }).catch(() => undefined);
+      await randomDelay(400, 800);
+    } catch {
+      // best-effort
+    }
+  }
 }
 
 /**
@@ -228,6 +349,7 @@ export async function scrapeMaps(
     maxCards = 80,
     timeoutMs = 120_000,
     headful = false,
+    enrichDetailsCount = 0,
   } = options;
 
   const startedAt = Date.now();
@@ -256,6 +378,14 @@ export async function scrapeMaps(
 
     await scrollFeed(page, maxCards, startedAt, timeoutMs);
     const raw = await extractCards(page);
+
+    // Enriquecimento opcional (abrir detalhe de cada place)
+    if (enrichDetailsCount > 0) {
+      const remainingMs = timeoutMs - (Date.now() - startedAt);
+      if (remainingMs > 10_000) {
+        await enrichWithPlaceDetails(page, raw, enrichDetailsCount);
+      }
+    }
 
     // Filtro por raio (haversine) quando temos lat/lng
     const filtered: ScrapedPlace[] = [];

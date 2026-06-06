@@ -49,6 +49,13 @@ export interface ScrapedPlace {
   site?: string;
   lat?: number;
   lng?: number;
+  // Enriquecimento Maps
+  rating?: number;
+  totalReviews?: number;
+  horario?: string;
+  instagram?: string;
+  facebook?: string;
+  claimed?: boolean;
 }
 
 // Payload da API de busca

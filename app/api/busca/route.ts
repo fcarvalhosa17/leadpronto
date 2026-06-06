@@ -60,7 +60,9 @@ export async function POST(req: Request) {
       centro,
       raioKm,
       maxCards: 80,
-      timeoutMs: 120_000,
+      timeoutMs: 180_000,
+      // abre detalhe dos 10 primeiros para enriquecer com redes sociais e claimed
+      enrichDetailsCount: 10,
     });
 
     // 3. Cria registro da busca
@@ -98,6 +100,12 @@ export async function POST(req: Request) {
           lat: p.lat,
           lng: p.lng,
           distanciaKm,
+          rating: p.rating,
+          totalReviews: p.totalReviews,
+          horario: p.horario,
+          instagram: p.instagram,
+          facebook: p.facebook,
+          claimed: p.claimed,
           statusQual: semSite ? "sem_site" : "pendente",
           score: semSite ? 75 : 0,
           qualifiedAt: semSite ? new Date() : null,
@@ -113,6 +121,12 @@ export async function POST(req: Request) {
           lat: p.lat ?? undefined,
           lng: p.lng ?? undefined,
           distanciaKm: distanciaKm ?? undefined,
+          rating: p.rating ?? undefined,
+          totalReviews: p.totalReviews ?? undefined,
+          horario: p.horario ?? undefined,
+          instagram: p.instagram ?? undefined,
+          facebook: p.facebook ?? undefined,
+          claimed: p.claimed ?? undefined,
         },
       });
     });
