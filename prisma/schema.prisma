@@ -41,6 +41,14 @@ model Lead {
   lng           Float?
   distanciaKm   Float?
 
+  // Enriquecimento Maps
+  rating        Float?     // nota Google (ex: 4.2)
+  totalReviews  Int?       // numero de avaliacoes
+  horario       String?    // texto bruto de status (ex: "Aberto agora - Fecha as 18:00")
+  instagram     String?    // URL do Instagram se presente no perfil
+  facebook      String?    // URL do Facebook se presente
+  claimed       Boolean?   // negocio reivindicou o perfil no Maps?
+
   // Qualificacao
   statusQual    String   @default("pendente") // pendente | sem_site | analisado | erro
   psiScore      Int?
@@ -56,14 +64,44 @@ model Lead {
   score         Int      @default(0)
 
   // CRM
-  statusCrm     String   @default("novo") // novo | contatado | reuniao | proposta | fechado
+  statusCrm       String    @default("novo") // novo | contatado | reuniao | proposta | fechado
+  proximoContato  DateTime?
 
   // Auditoria
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   qualifiedAt   DateTime?
 
+  notas         LeadNota[]
+  atividades    LeadAtividade[]
+
   @@index([statusQual])
   @@index([statusCrm])
   @@index([score])
+}
+
+// Notas livres associadas a um lead no CRM.
+model LeadNota {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  texto     String
+  criadaEm  DateTime @default(now())
+
+  @@index([leadId])
+  @@index([criadaEm])
+}
+
+// Historico de atividades (mudancas de status, notas adicionadas, etc).
+// tipo: status_crm_changed | nota_adicionada | qualificado
+model LeadAtividade {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tipo        String
+  descricao   String
+  criadaEm    DateTime @default(now())
+
+  @@index([leadId])
+  @@index([criadaEm])
 }
